@@ -26,6 +26,16 @@ After you have successfully installed puppy, you can see help as follows:
 puppy help
 ```
 
+You can install shell completions as follows:
+
+```sh
+# in bash
+eval "$(puppy completion bash)"
+
+# in fish
+puppy completion fish | source
+```
+
 ## How to run tests locally
 
 You can run tests with the following command(s):

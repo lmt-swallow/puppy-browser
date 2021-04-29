@@ -16,7 +16,7 @@ pub fn run(opts: Opts) -> i32 {
         Opts::Fish => completion(Shell::Fish),
     };
 
-    0
+    return 0
 }
 
 fn completion(s: Shell) {

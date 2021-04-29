@@ -27,8 +27,7 @@ fn main() {
     }
 
     let exit_code = match opts.sub_command {
-        cli::SubCommand::Simulate(sub_opts) => cli::subcommand::simulate::run(sub_opts),
-        cli::SubCommand::Build(sub_opts) => cli::subcommand::build::run(sub_opts),
+        cli::SubCommand::Open(sub_opts) => cli::subcommand::open::run(sub_opts),
         cli::SubCommand::Completion(sub_opts) => cli::subcommand::completion::run(sub_opts),
     };
 
