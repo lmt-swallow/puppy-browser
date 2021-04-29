@@ -1,12 +1,12 @@
 // `Node` interface
 // definition: https://dom.spec.whatwg.org/#interface-node
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Node {
     pub node_type: NodeType,
     pub child_nodes: Vec<Node>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum NodeType {
     Element(super::element::Element),
     Text(super::chardata::Text),

@@ -2,7 +2,7 @@ use super::{DOMException, Node, NodeType};
 
 // `Document` interface
 // definition: https://dom.spec.whatwg.org/#interface-document
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Document {
     pub url: String,
     pub document_uri: String,
@@ -15,7 +15,7 @@ impl Document {
         child_nodes: Vec<Node>,
     ) -> Result<Node, DOMException> {
         if child_nodes.len() >= 2 {
-            Err(DOMException::InvalidDocumentElement )
+            Err(DOMException::InvalidDocumentElement)
         } else {
             Ok(Node {
                 node_type: NodeType::Document(Document {
@@ -30,7 +30,7 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
-    use crate::dom::{Document,Element, NodeType, AttrMap};    
+    use crate::dom::{AttrMap, Document, Element, NodeType};
 
     #[test]
     fn test_valid_new() {
@@ -50,14 +50,17 @@ mod tests {
         }
     }
 
-
     #[test]
     fn test_invalid_new() {
         let url = "http://example.com";
-        if let Ok(_)= Document::new(url.to_string(), url.to_string(), vec![
-            Element::new("p".to_string(), AttrMap::new(), vec![]) ,
-            Element::new("p".to_string(), AttrMap::new(), vec![]) ,
-        ]) {
+        if let Ok(_) = Document::new(
+            url.to_string(),
+            url.to_string(),
+            vec![
+                Element::new("p".to_string(), AttrMap::new(), vec![]),
+                Element::new("p".to_string(), AttrMap::new(), vec![]),
+            ],
+        ) {
             assert!(false)
         }
     }

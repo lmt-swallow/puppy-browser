@@ -1,3 +1,5 @@
+#[derive(Debug, PartialEq)]
 pub struct Source {
-    body: String,
+    pub from_url: String,
+    pub body: String,
 }
