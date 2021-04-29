@@ -1,0 +1,17 @@
+[package]
+name = "puppy"
+version = "0.1.0"
+authors = ["Takashi Yoneuchi <takashi.yoneuchi@shift-js.info>"]
+edition = "2018"
+
+[[bin]]
+name = "puppy"
+test = false
+bench = false
+
+[dependencies]
+log = "0.4"
+fern = "0.5"
+chrono = "0.4"
+clap-verbosity-flag = "0.3.1"
+structopt = "0.3.21"

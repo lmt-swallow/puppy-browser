@@ -1,0 +1,27 @@
+name: Run lint
+
+on:
+  push:
+
+jobs:
+  lint:
+    strategy:
+      matrix:
+        rust:
+          - stable
+        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout HEAD
+        uses: actions/checkout@v1
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - run: rustup component add clippy
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features

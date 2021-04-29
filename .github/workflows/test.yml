@@ -1,0 +1,28 @@
+name: Run tests
+
+on:
+  push:
+
+jobs:
+  test:
+    # TODO (enhancement): We can extend this timeout if our tests get larger than expected.
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        rust:
+          - stable
+        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout HEAD
+        uses: actions/checkout@v1
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Build
+        run: cargo build
+      - name: Run tests
+        run: cargo test
