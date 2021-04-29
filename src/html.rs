@@ -1,9 +1,163 @@
-use crate::dom::Node;
+use crate::dom::{AttrMap, Document, Element, Node, Text};
 use crate::source::Source;
+#[allow(unused_imports)]
+use combine::EasyParser;
+use combine::{attempt, error::StreamError, many};
+use combine::{between, many1, parser, sep_by, Parser, Stream};
+use combine::{choice, error::ParseError};
+use combine::{
+    parser::char::{char, letter, spaces},
+    satisfy,
+};
 
-// https://html.spec.whatwg.org/multipage/parsing.html#parsing
-fn parse(source: Source) -> Node {
-    todo!()
+// [NOTE] Specification on HTML parsing: https://html.spec.whatwg.org/multipage/parsing.html#parsing
+//
+// The specification defines parsing algorithm of HTML, which takes input stream as argument and emits DOM.
+// It consists of the following two stages:
+// 1. tokenization stage
+// 2. tree construction stage
+// The first one, tokenization stage, generates tokens from input stream.
+// The latter one, tree construction stage, constructs a DOM while handling scripts inside <script> tags.
+//
+// This implementation omits details of those two stages for simplicity.
+// Please check the following if you'd like to know about the parsing process more deeply:
+// - html5ever crate by Serve project https://github.com/servo/html5ever
+// - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
+
+fn parse(source: Source) -> Result<Node, ()> {
+    // TODO (enhancement): Determine character encoding as follows:
+    // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-stream
+    let body = String::from_utf8(source.data).unwrap();
+    let nodes = nodes().parse(&body as &str);
+    match nodes {
+        Ok((nodes, _)) => {
+            let child_nodes = if nodes.len() == 1 {
+                nodes
+            } else {
+                vec![Element::new("html".to_string(), AttrMap::new(), nodes)]
+            };
+            match Document::new(
+                source.from_url.clone(),
+                source.from_url.clone(),
+                child_nodes,
+            ) {
+                Ok(document_node) => Ok(document_node),
+                Err(_) => {
+                    // TODO (enhancement): set appropriate error
+                    Err(())
+                }
+            }
+        }
+        Err(_) => {
+            // TODO (enhancement): set appropriate error
+            Err(())
+        }
+    }
+}
+
+// `nodes_` (and `nodes`) tries to parse input as Element or Text.
+fn nodes_<Input>() -> impl Parser<Input, Output = Vec<Node>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    attempt(many(choice((attempt(element()), attempt(text())))))
+}
+
+/// `text` consumes input until `<` comes.
+fn text<Input>() -> impl Parser<Input, Output = Node>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    many1(satisfy(|c: char| c != '<')).map(|t| Text::new(t))
+}
+
+/// `element` consumes `<tag_name attr_name="attr_value" ...>(children)</tag_name>`.
+fn element<Input>() -> impl Parser<Input, Output = Node>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    (open_tag(), nodes(), close_tag()).and_then(
+        |((open_tag_name, attributes), child_nodes, close_tag_name)| {
+            if open_tag_name == close_tag_name {
+                Ok(Element::new(open_tag_name, attributes, child_nodes))
+            } else {
+                Err(<Input::Error as combine::error::ParseError<
+                    char,
+                    Input::Range,
+                    Input::Position,
+                >>::StreamError::message_static_message(
+                    "tag name of open tag and close tag mismatched",
+                ))
+            }
+        },
+    )
+}
+
+/// `open_tag` consumes `<tag_name attr_name="attr_value" ...>`.
+fn open_tag<Input>() -> impl Parser<Input, Output = (String, AttrMap)>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let open_tag_name = many1::<String, _, _>(letter());
+    let open_tag_content =
+        (open_tag_name, spaces(), attributes()).map(|v: (String, _, AttrMap)| (v.0, v.2));
+    between(char('<'), char('>'), open_tag_content)
+}
+
+/// close_tag consumes `</tag_name>`.
+fn close_tag<Input>() -> impl Parser<Input, Output = String>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let close_tag_name = many1::<String, _, _>(letter());
+    let close_tag_content = (char('/'), close_tag_name).map(|v| v.1);
+    between(char('<'), char('>'), close_tag_content)
+}
+
+/// `attribute` consumes `name="value"`.
+fn attribute<Input>() -> impl Parser<Input, Output = (String, String)>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let attribute_name = many1::<String, _, _>(letter());
+    let attribute_inner_value = many1::<String, _, _>(satisfy(|c: char| c != '"'));
+    let attribute_value = between(char('"'), char('"'), attribute_inner_value);
+    (
+        attribute_name,
+        spaces(),
+        char('='),
+        spaces(),
+        attribute_value,
+    )
+        .map(|v| (v.0, v.4))
+}
+
+/// `attributes` consumes `name1="value1" name2="value2" ... name="value"`
+fn attributes<Input>() -> impl Parser<Input, Output = AttrMap>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    sep_by::<Vec<(String, String)>, _, _, _>(attribute(), spaces()).map(
+        |attrs: Vec<(String, String)>| {
+            let m: AttrMap = attrs.into_iter().collect();
+            m
+        },
+    )
+}
+
+parser! {
+    fn nodes[Input]()(Input) -> Vec<Node>
+    where [Input: Stream<Token = char>]
+    {
+        nodes_()
+    }
 }
 
 #[cfg(test)]
@@ -12,15 +166,123 @@ mod tests {
     use crate::dom::{AttrMap, Document, Element, Text};
     use crate::source::Source;
 
+    // parsing tests of attributes
     #[test]
-    fn test_parse_single__without_nest() {
+    fn test_parse_attribute() {
+        assert_eq!(
+            attribute().easy_parse("test=\"foobar\""),
+            Ok((("test".to_string(), "foobar".to_string()), ""))
+        );
+
+        assert_eq!(
+            attribute().easy_parse("test = \"foobar\""),
+            Ok((("test".to_string(), "foobar".to_string()), ""))
+        )
+    }
+
+    #[test]
+    fn test_parse_attributes() {
+        let mut expected_map = AttrMap::new();
+        expected_map.insert("test".to_string(), "foobar".to_string());
+        assert_eq!(
+            attributes().easy_parse("test=\"foobar\""),
+            Ok((expected_map, ""))
+        );
+
+        assert_eq!(attributes().easy_parse(""), Ok((AttrMap::new(), "")))
+    }
+
+    // parsing tests of open tags
+    #[test]
+    fn test_parse_open_tag_without_attributes() {}
+
+    #[test]
+    fn test_parse_open_tag() {
+        {
+            assert_eq!(
+                open_tag().easy_parse("<p>aaaa"),
+                Ok((("p".to_string(), AttrMap::new()), "aaaa"))
+            );
+        }
+        {
+            let mut attributes = AttrMap::new();
+            attributes.insert("id".to_string(), "test".to_string());
+            assert_eq!(
+                open_tag().easy_parse("<p id=\"test\">"),
+                Ok((("p".to_string(), attributes), ""))
+            )
+        }
+
+        {
+            let result = open_tag().easy_parse("<p id=\"test\" class=\"sample\">");
+            let mut attributes = AttrMap::new();
+            attributes.insert("id".to_string(), "test".to_string());
+            attributes.insert("class".to_string(), "sample".to_string());
+            assert_eq!(result, Ok((("p".to_string(), attributes), "")));
+        }
+
+        {
+            assert!(open_tag().easy_parse("<p id>").is_err());
+        }
+    }
+
+    // parsing tests of close tags
+    #[test]
+    fn test_parse_close_tag() {
+        let result = close_tag().easy_parse("</p>");
+        assert_eq!(result, Ok(("p".to_string(), "")))
+    }
+
+    // parsing tests of an element
+    #[test]
+    fn test_parse_element() {
+        assert_eq!(
+            element().easy_parse("<p></p>"),
+            Ok((Element::new("p".to_string(), AttrMap::new(), vec![]), ""))
+        );
+
+        assert_eq!(
+            element().easy_parse("<p>Hello World</p>"),
+            Ok((
+                Element::new(
+                    "p".to_string(),
+                    AttrMap::new(),
+                    vec![Text::new("Hello World".to_string())]
+                ),
+                ""
+            ))
+        );
+
+        assert!(element().easy_parse("<p>Hello World</div>").is_err());
+    }
+
+    // parsing tests of a tag
+    #[test]
+    fn test_parse_text() {
+        {
+            assert_eq!(
+                text().easy_parse("Hello World"),
+                Ok((Text::new("Hello World".to_string()), ""))
+            );
+        }
+        {
+            assert_eq!(
+                text().easy_parse("Hello World<"),
+                Ok((Text::new("Hello World".to_string()), "<"))
+            );
+        }
+    }
+
+    // parsing tests of documents
+    #[test]
+    fn test_parse_single_without_nest() {
         let url = "http://example.com";
         let s = Source {
             from_url: url.to_string(),
-            body: "<p>Hello World</p>".to_string(),
+            data: "<p>Hello World</p>".as_bytes().to_vec(),
         };
         let got = parse(s);
-        let expected = Document::new(
+        let expected = Ok(Document::new(
             url.to_string(),
             url.to_string(),
             vec![Element::new(
@@ -29,7 +291,7 @@ mod tests {
                 vec![Text::new("Hello World".to_string())],
             )],
         )
-        .unwrap();
+        .unwrap());
         assert_eq!(got, expected)
     }
 
@@ -38,27 +300,32 @@ mod tests {
         let url = "http://example.com";
         let s = Source {
             from_url: url.to_string(),
-            body: "<p>Hello World (1)</p><p>Hello World (2)</p>".to_string(),
+            data: "<p>Hello World (1)</p><p>Hello World (2)</p>"
+                .as_bytes()
+                .to_vec(),
         };
-        let got = parse(s);
-        let expected = Document::new(
+        let expected = Ok(Document::new(
             url.to_string(),
             url.to_string(),
-            vec![
-                Element::new(
-                    "p".to_string(),
-                    AttrMap::new(),
-                    vec![Text::new("Hello World (1)".to_string())],
-                ),
-                Element::new(
-                    "p".to_string(),
-                    AttrMap::new(),
-                    vec![Text::new("Hello World (2)".to_string())],
-                ),
-            ],
+            vec![Element::new(
+                "html".to_string(),
+                AttrMap::new(),
+                vec![
+                    Element::new(
+                        "p".to_string(),
+                        AttrMap::new(),
+                        vec![Text::new("Hello World (1)".to_string())],
+                    ),
+                    Element::new(
+                        "p".to_string(),
+                        AttrMap::new(),
+                        vec![Text::new("Hello World (2)".to_string())],
+                    ),
+                ],
+            )],
         )
-        .unwrap();
-        assert_eq!(got, expected)
+        .unwrap());
+        assert_eq!(parse(s), expected)
     }
 
     #[test]
@@ -66,10 +333,11 @@ mod tests {
         let url = "http://example.com";
         let s = Source {
             from_url: url.to_string(),
-            body: "<div><p>nested (1)</p><p>nested (2)</p></div>".to_string(),
+            data: "<div><p>nested (1)</p><p>nested (2)</p></div>"
+                .as_bytes()
+                .to_vec(),
         };
-        let got = parse(s);
-        let expected = Document::new(
+        let expected = Ok(Document::new(
             url.to_string(),
             url.to_string(),
             vec![Element::new(
@@ -89,7 +357,7 @@ mod tests {
                 ],
             )],
         )
-        .unwrap();
-        assert_eq!(got, expected)
+        .unwrap());
+        assert_eq!(parse(s), expected)
     }
 }

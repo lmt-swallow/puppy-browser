@@ -2,6 +2,7 @@ use super::{DOMException, Node, NodeType};
 
 // `Document` interface
 // definition: https://dom.spec.whatwg.org/#interface-document
+// https://html.spec.whatwg.org/multipage/dom.html#the-document-object
 #[derive(Debug, PartialEq)]
 pub struct Document {
     pub url: String,
