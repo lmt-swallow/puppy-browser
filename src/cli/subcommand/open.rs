@@ -61,7 +61,7 @@ pub fn run(opts: Opts) -> i32 {
     set_menubar(&mut siv);
 
     // build window
-    let navbar = NavigationBar::new("navbar", start_url.clone()).on_navigation(|s, to| {
+    let navbar = NavigationBar::new(start_url.clone()).on_navigation(|s, to| {
         alert(s, "Debug (TODO)".to_string(), to.to_string());
     });
     let content = Panel::new(ScrollView::new(DummyView).full_height()); // TODO

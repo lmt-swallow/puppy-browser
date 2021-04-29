@@ -10,16 +10,15 @@ use cursive::{
     Cursive, Printer, Rect, Vec2, View, With, XY,
 };
 
-use super::alert;
-
 pub struct NavigationBar {
-    input_id: &'static str,
-    button_id: String,
     layout: Rc<RefCell<LinearLayout>>,
+
+    input_id: &'static str,
+    button_id: &'static str,
 }
 
 impl NavigationBar {
-    pub fn new(id: &'static str, default_value: String) -> NavigationBar {
+    pub fn new(default_value: String) -> NavigationBar {
         let theme = Theme::default().with(|theme| {
             theme.palette[PaletteColor::Primary] = Color::Dark(BaseColor::Black);
             theme.palette[PaletteColor::View] = Color::Dark(BaseColor::Black);
@@ -27,8 +26,8 @@ impl NavigationBar {
         });
 
         NavigationBar {
-            input_id: id,
-            button_id: format!("{}-button", id),
+            input_id: "navbar-input",
+            button_id: "navbar-button",
             layout: Rc::new(RefCell::new(
                 LinearLayout::vertical().child(
                     ResizedView::with_full_width(
@@ -39,14 +38,13 @@ impl NavigationBar {
                                     1,
                                     EditView::new()
                                         .content(default_value)
-                                        // })
-                                        .with_name(id)
+                                        .with_name("navbar-input")
                                         .full_width(),
                                 ),
                             )))
                             .child(Panel::new(
                                 Button::new("Go", |s: &mut Cursive| {})
-                                    .with_name(format!("{}-button", id))
+                                    .with_name("navbar-button")
                                     .fixed_width(5)
                                     .fixed_height(1),
                             )),
@@ -80,11 +78,11 @@ impl NavigationBar {
             });
 
         let cb_button = callback.clone();
-        let input_id: &'static str = self.input_id;
         let layout = self.layout.clone();
+        let input_id = self.input_id;
         self.layout
             .borrow_mut()
-            .call_on_name(self.button_id.as_str(), |view: &mut Button| {
+            .call_on_name(self.button_id, |view: &mut Button| {
                 view.set_callback(move |s| {
                     layout
                         .borrow_mut()
