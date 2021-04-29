@@ -24,7 +24,7 @@ use combine::{
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
-fn parse(source: Source) -> Result<Node, ()> {
+pub fn parse(source: Source) -> Result<Node, ()> {
     // TODO (enhancement): Determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-stream
     let body = String::from_utf8(source.data).unwrap();
