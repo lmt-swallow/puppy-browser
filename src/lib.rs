@@ -4,3 +4,4 @@ mod fetch;
 mod html;
 mod ui;
 mod url;
+mod util;
