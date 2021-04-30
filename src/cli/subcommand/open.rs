@@ -1,8 +1,4 @@
-use crate::{
-    cli::CommonOpts,
-    html, source,
-    ui::{self, ElementContainer, NavigationBar},
-};
+use crate::{cli::CommonOpts, html, source, ui::{self, ElementContainer, components::NavigationBar}};
 use cursive::{
     event::Key,
     menu,
