@@ -7,8 +7,8 @@ pub type AttrMap = HashMap<String, String>;
 // definition: https://dom.spec.whatwg.org/#interface-element
 #[derive(Debug, PartialEq)]
 pub struct Element {
-    tag_name: String,
-    attributes: AttrMap,
+    pub tag_name: String,
+    pub attributes: AttrMap,
 }
 
 impl Element {

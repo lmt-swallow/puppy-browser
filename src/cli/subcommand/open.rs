@@ -1,22 +1,20 @@
 use crate::{
+    cli::CommonOpts,
     html, source,
-    ui::{alert, NavigationBar},
+    ui::{self, ElementContainer, NavigationBar},
 };
 use cursive::{
     event::Key,
     menu,
-    theme::{BaseColor, PaletteColor},
-    traits::Boxable,
-    views::{DummyView, LinearLayout, Panel, ScrollView},
-    CursiveRunnable,
+    traits::{Boxable, Nameable},
+    views::{LinearLayout, Panel, ScrollView},
+    Cursive, CursiveRunnable,
 };
-use cursive::{
-    theme::Color,
-    views::{Dialog, TextView},
-};
+use cursive::{logger, views::Dialog};
 #[allow(unused_imports)]
 use cursive_aligned_view::Alignable;
 
+use log::{error, info, set_max_level};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -24,19 +22,12 @@ pub struct Opts {
     pub url: Option<String>,
 }
 
-fn set_theme(siv: &mut CursiveRunnable) {
-    let mut theme = siv.current_theme().clone();
-    theme.palette[PaletteColor::Background] = Color::Dark(BaseColor::White);
-    theme.palette[PaletteColor::View] = Color::Dark(BaseColor::White);
-    siv.set_theme(theme);
-}
-
-fn set_menubar(siv: &mut CursiveRunnable) {
+fn enable_menubar(siv: &mut CursiveRunnable) {
     siv.menubar()
         .add_subtree(
             "Operation",
-            menu::Tree::new().leaf("Go", |s| {
-                s.add_layer(Dialog::info("TODO (not implemented yet!)"))
+            menu::Tree::new().leaf("Toggle debug console", |s| {
+                s.toggle_debug_console();
             }),
         )
         .add_subtree(
@@ -52,27 +43,70 @@ fn set_menubar(siv: &mut CursiveRunnable) {
     siv.add_global_callback(Key::Esc, |s| s.select_menubar());
 }
 
-pub fn run(opts: Opts) -> i32 {
+pub fn navigate(s: &mut Cursive, url: String) {
+    info!("start to navigate to {}", url);
+
+    // TODO (enhancement): error handling
+    info!("fetch a resource from {}", url);
+    let source = source::fetch(&url);
+    if let Err(_e) = source {
+        error!("failed to fetch {}; {}", url, _e);
+        return;
+    }
+
+    // TODO (enhancement): error handling
+    info!("parse the resource from {}", url);
+    let document = html::parse(source.unwrap());
+    if let Err(_e) = document {
+        error!("failed to parse {}; {}", url, _e);
+        return;
+    }
+
+    // TODO (future): rendering tree construction
+    info!("render the DOM of {}", url);
+    if s.call_on_name("content", |view: &mut ElementContainer| {
+        ui::render_node_from_document(view, &document.unwrap());
+    })
+    .is_none()
+    {
+        error!("failed to render {}; no element container found", url);
+    }
+}
+
+pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     let start_url = opts.url.unwrap_or("http://example.com".to_string());
 
     // set up base
     let mut siv = cursive::default();
-    set_theme(&mut siv);
-    set_menubar(&mut siv);
+    ui::theme::set_default_theme(&mut siv);
+    enable_menubar(&mut siv);
 
-    // build window
+    // set up logger
+    logger::init();
+    if let Some(level) = common_opts.verbose.log_level() {
+        set_max_level(level.to_level_filter());
+    }
+
+    // build window structure
     let navbar = NavigationBar::new(start_url.clone()).on_navigation(|s, to| {
-        alert(s, "Debug (TODO)".to_string(), to.to_string());
+        navigate(s, to);
     });
-    let content = Panel::new(ScrollView::new(DummyView).full_height()); // TODO
+    let content = Panel::new(
+        ScrollView::new(
+            LinearLayout::vertical()
+                .with_name("content")
+                .full_height()
+                .full_screen(),
+        )
+        .full_screen(),
+    )
+    .full_screen();
+
     let layer = LinearLayout::vertical().child(navbar).child(content);
     siv.add_fullscreen_layer(layer);
 
-    // let source = source::fetch(start_url.clone());
-    // // TODO (enhancement): error handling
-    // let dom = html::parse(source).unwrap();
-    // let root_node = dom.child_nodes.get(0).unwrap();
-    // root_node.child_nodes
+    // navigate to the first page
+    navigate(&mut siv, start_url.clone());
 
     // start event loop
     siv.run();

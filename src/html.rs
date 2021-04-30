@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use crate::dom::{AttrMap, Document, Element, Node, Text};
 use crate::source::Source;
 #[allow(unused_imports)]
@@ -24,7 +26,7 @@ use combine::{
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
-pub fn parse(source: Source) -> Result<Node, ()> {
+pub fn parse(source: Source) -> Result<Node, Box<Error>> {
     // TODO (enhancement): Determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-stream
     let body = String::from_utf8(source.data).unwrap();
@@ -42,15 +44,15 @@ pub fn parse(source: Source) -> Result<Node, ()> {
                 child_nodes,
             ) {
                 Ok(document_node) => Ok(document_node),
-                Err(_) => {
+                Err(e) => {
                     // TODO (enhancement): set appropriate error
-                    Err(())
+                    Err(Box::new(e))
                 }
             }
         }
-        Err(_) => {
+        Err(e) => {
             // TODO (enhancement): set appropriate error
-            Err(())
+            Err(Box::new(e))
         }
     }
 }
