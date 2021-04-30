@@ -1,14 +1,21 @@
-use crate::dom::{AttrMap, Document, Element, Node, Text};
+use std::error::Error;
+
+use crate::dom::{AttrMap, DOMException, Document, Element, Node, Text};
 use crate::source::Source;
 #[allow(unused_imports)]
 use combine::EasyParser;
-use combine::{attempt, error::StreamError, many};
+use combine::{
+    attempt,
+    error::{StreamError, StringStreamError},
+    many,
+};
 use combine::{between, many1, parser, sep_by, Parser, Stream};
 use combine::{choice, error::ParseError};
 use combine::{
     parser::char::{char, letter, spaces},
     satisfy,
 };
+use thiserror::Error;
 
 // [NOTE] Specification on HTML parsing: https://html.spec.whatwg.org/multipage/parsing.html#parsing
 //
@@ -24,7 +31,16 @@ use combine::{
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
-fn parse(source: Source) -> Result<Node, ()> {
+#[derive(Error, Debug, PartialEq)]
+pub enum HTMLParseError {
+    #[error("failed to construct DOM tree; {0}")]
+    InvalidDocumentError(DOMException),
+
+    #[error("failed to parse; {0}")]
+    InvalidResourceError(StringStreamError),
+}
+
+pub fn parse(source: Source) -> Result<Node, HTMLParseError> {
     // TODO (enhancement): Determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-stream
     let body = String::from_utf8(source.data).unwrap();
@@ -42,16 +58,10 @@ fn parse(source: Source) -> Result<Node, ()> {
                 child_nodes,
             ) {
                 Ok(document_node) => Ok(document_node),
-                Err(_) => {
-                    // TODO (enhancement): set appropriate error
-                    Err(())
-                }
+                Err(e) => Err(HTMLParseError::InvalidDocumentError(e)),
             }
         }
-        Err(_) => {
-            // TODO (enhancement): set appropriate error
-            Err(())
-        }
+        Err(e) => Err(HTMLParseError::InvalidResourceError(e)),
     }
 }
 
@@ -282,7 +292,7 @@ mod tests {
             data: "<p>Hello World</p>".as_bytes().to_vec(),
         };
         let got = parse(s);
-        let expected = Ok(Document::new(
+        let expected: Result<Node, HTMLParseError> = Ok(Document::new(
             url.to_string(),
             url.to_string(),
             vec![Element::new(
