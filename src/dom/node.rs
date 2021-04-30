@@ -14,7 +14,7 @@ pub enum NodeType {
 }
 
 impl Node {
-    fn append_child(&mut self, n: Node) -> &Node {
+    pub fn append_child(&mut self, n: Node) -> &Node {
         self.child_nodes.push(n);
         self.child_nodes.last().unwrap()
     }

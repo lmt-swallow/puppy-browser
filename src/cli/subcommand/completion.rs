@@ -11,7 +11,7 @@ pub enum Opts {
     Fish,
 }
 
-pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
+pub fn run(_common_opts: CommonOpts, opts: Opts) -> i32 {
     match opts {
         Opts::Bash => completion(Shell::Bash),
         Opts::Zsh => completion(Shell::Zsh),
