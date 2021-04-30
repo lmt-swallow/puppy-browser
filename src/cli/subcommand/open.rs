@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::PathBuf};
 
 use crate::{
     cli::CommonOpts,
@@ -92,20 +92,44 @@ pub fn navigate(s: &mut Cursive, url: String) {
     }
 }
 
-fn normalize_initial_url(u: String) -> String {
-    if !u.starts_with("http://") || !u.starts_with("https://") | !u.starts_with("/") {
-        let mut current_dir = env::current_dir().unwrap();
-        current_dir.push(u);
-        format!("file://{}", current_dir.to_str().unwrap())
-    } else {
+fn normalize_fileurl_with(mut current_dir: PathBuf, u: String) -> String {
+    if u.starts_with("http://") || u.starts_with("https://") {
         u
+    } else {
+        if u.starts_with("/") {
+            format!("file://{}", u)
+        } else {
+            current_dir.push(u);
+            format!("file://{}", current_dir.to_str().unwrap())
+        }
     }
+}
+
+#[test]
+fn test_normalize_fileurl_with() {
+    let pbuf = PathBuf::from("/tmp");
+    assert_eq!(
+        normalize_fileurl_with(pbuf.clone(), "http://example.com".to_string()),
+        "http://example.com"
+    );
+    assert_eq!(
+        normalize_fileurl_with(pbuf.clone(), "https://example.com/path/path2".to_string()),
+        "https://example.com/path/path2"
+    );
+    assert_eq!(
+        normalize_fileurl_with(pbuf.clone(), "/etc/passwd".to_string()),
+        "file:///etc/passwd"
+    );
+    assert_eq!(
+        normalize_fileurl_with(pbuf.clone(), "test/aa.html".to_string()),
+        "file:///tmp/test/aa.html"
+    );
 }
 
 pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     let start_url = opts
         .url
-        .and_then(|u| Some(normalize_initial_url(u)))
+        .and_then(|u| Some(normalize_fileurl_with(env::current_dir().unwrap(), u)))
         .unwrap_or("http://example.com".to_string());
 
     // set up base

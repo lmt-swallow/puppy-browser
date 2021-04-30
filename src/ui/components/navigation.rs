@@ -43,7 +43,7 @@ impl NavigationBar {
                                 ),
                             )))
                             .child(Panel::new(
-                                Button::new("Go", |s: &mut Cursive| {})
+                                Button::new("Go", |_s: &mut Cursive| {})
                                     .with_name("navbar-button")
                                     .fixed_width(5)
                                     .fixed_height(1),
