@@ -9,7 +9,6 @@ pub fn alert(s: &mut Cursive, title: String, content: String) {
             .title(title)
             .button("Quit", |s| {
                 s.pop_layer();
-                ()
             }),
     );
 }
