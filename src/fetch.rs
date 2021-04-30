@@ -1,4 +1,7 @@
+use crate::url::{ParseError, Url};
+use log::{error, info};
 use num_derive::{self, FromPrimitive};
+use std::fs;
 use std::{collections::HashMap, fmt, str::FromStr};
 use thiserror::Error;
 
@@ -47,6 +50,8 @@ impl FromStr for ResponseType {
 
 pub type HeaderMap = HashMap<String, String>;
 
+/// `Request` interface: https://fetch.spec.whatwg.org/#request-class
+/// This structure will be used both in internal processing and in JS engine.
 #[derive(Debug, PartialEq)]
 pub struct Request {
     pub url: String,
@@ -54,16 +59,16 @@ pub struct Request {
 
 impl Request {
     pub fn new(url: String) -> Self {
-        Request {
-            url: url
-        }
+        Request { url: url }
     }
 }
 
+// `Response` interface: https://fetch.spec.whatwg.org/#response-class
+/// This structure will be used both in internal processing and in JS engine.
 #[derive(Debug, PartialEq)]
 pub struct Response {
     pub rtype: ResponseType,
-    pub url: String,
+    pub url: Url,
     pub status: HTTPStatus,
     pub headers: HeaderMap,
     pub data: Vec<u8>,
@@ -71,22 +76,74 @@ pub struct Response {
 
 #[derive(Error, Debug, PartialEq)]
 pub enum FetchError {
-    #[error("failed to fetch")]
-    NetworkError {
-        // error: Box<Error>,
-        response: Response,
+    #[error("failed to fetch because of something")]
+    NetworkError { response: Option<Response> },
+
+    #[error("failed to fetch because given url is invalid")]
+    URLParseError {
+        error: ParseError,
+        response: Option<Response>,
+    },
+
+    #[error("failed to fetch because scheme {scheme:?} is not supported")]
+    URLSchemeUnsupportedError {
+        scheme: String,
+        response: Option<Response>,
     },
 }
 
 // NOTE: Fetch Standard defines a way to handle requests consistently across the web platforms.
 // - https://fetch.spec.whatwg.org/#fetching
+//
+// The name of the specification may remind you of `fetch()` function in JS,
+// but it includes wider definitions (such as the behaviour of navigation requests).
+
 pub fn fetch(request: Request) -> Result<Response, FetchError> {
-    // TODO
-    Ok(Response {
-        url: request.url.to_string(),
-        status: HTTPStatus::OK,
-        rtype: ResponseType::Basic,
-        headers: HeaderMap::new(),
-        data: "<p>Hello World</p><p>Hello World2</p>".as_bytes().to_vec(),
-    })
+    match Url::parse(request.url.as_str()) {
+        Ok(u) => {
+            // Err(FetchError::NetworkError { response: None })
+            match u.scheme() {
+                "file" => {
+                    info!("[file:] local resource at {} is requested.", u.path());
+                    match fs::read(u.path()) {
+                        Ok(content) => Ok(Response {
+                            url: u,
+                            status: HTTPStatus::OK,
+                            rtype: ResponseType::Basic,
+                            headers: HeaderMap::new(),
+                            data: content,
+                        }),
+                        Err(_e) => Err(FetchError::NetworkError { response: None }),
+                    }
+                }
+                "http" | "https" => {
+                    info!(
+                        "[http(s):] remote resource at {} is requested.",
+                        u.to_string()
+                    );
+                    Ok(Response {
+                        url: u,
+                        status: HTTPStatus::OK,
+                        rtype: ResponseType::Basic,
+                        headers: HeaderMap::new(),
+                        data: "<p>TODO (unimplemented)</p>".as_bytes().to_vec(),
+                    })
+                }
+                unsupported_scheme => {
+                    // TODO (enhancement): set appropriate response
+                    Err(FetchError::URLSchemeUnsupportedError {
+                        scheme: unsupported_scheme.to_string(),
+                        response: None,
+                    })
+                }
+            }
+        }
+        Err(e) => {
+            // TODO (enhancement): set appropriate response
+            Err(FetchError::URLParseError {
+                error: e,
+                response: None,
+            })
+        }
+    }
 }

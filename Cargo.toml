@@ -21,3 +21,4 @@ cursive = { git = "https://github.com/gyscos/cursive" }
 cursive-aligned-view = "0.4.0"
 num-traits = "0.2"
 num-derive = "0.3"
+url = "2.2.1"

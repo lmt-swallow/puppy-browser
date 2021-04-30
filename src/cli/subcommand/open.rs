@@ -43,6 +43,18 @@ pub fn navigate(s: &mut Cursive, url: String) {
     info!("start to navigate to {}", url);
 
     // TODO (enhancement): error handling
+    info!("clear the current view to render {}", url);
+    if s.call_on_name("content", |view: &mut ElementContainer| {
+        for _ in 0..view.len() {
+            view.remove_child(0);
+        }
+    })
+    .is_none()
+    {
+        error!("failed to clear the current view to render {}; no element container found", url);
+    }
+
+    // TODO (enhancement): error handling
     info!("fetch a resource from {}", url);
     let req = Request::new(url.clone());
     let response = fetch::fetch(req);
@@ -62,10 +74,6 @@ pub fn navigate(s: &mut Cursive, url: String) {
     // TODO (future): render with rendering tree instead of DOM itself.
     info!("render the DOM of {}", url);
     if s.call_on_name("content", |view: &mut ElementContainer| {
-        for i in 0..view.len() {
-            view.remove_child(0);
-        }
-
         ui::render_node_from_document(view, &document.unwrap());
     })
     .is_none()
