@@ -1,6 +1,7 @@
 pub mod cli;
-mod dom;
-mod fetch;
-mod html;
-mod ui;
-mod url;
+pub mod dom;
+pub mod fetch;
+pub mod html;
+pub mod ui;
+pub mod url;
+pub mod util;

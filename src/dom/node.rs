@@ -18,6 +18,22 @@ impl Node {
         self.child_nodes.push(n);
         self.child_nodes.last().unwrap()
     }
+
+    pub fn inner_text(&self) -> String {
+        self.child_nodes
+            .iter()
+            .clone()
+            .into_iter()
+            .map(|node| match node {
+                Node {
+                    node_type: NodeType::Text(t),
+                    ..
+                } => t.data.clone(),
+                n => n.inner_text(),
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    }
 }
 
 #[cfg(test)]

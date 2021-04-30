@@ -15,6 +15,15 @@ use combine::{
 };
 use thiserror::Error;
 
+#[derive(Error, Debug, PartialEq)]
+pub enum HTMLParseError {
+    #[error("failed to construct DOM tree; {0}")]
+    InvalidDocumentError(DOMException),
+
+    #[error("failed to parse; {0}")]
+    InvalidResourceError(StringStreamError),
+}
+
 // [NOTE] Specification on HTML parsing: https://html.spec.whatwg.org/multipage/parsing.html#parsing
 //
 // The specification defines parsing algorithm of HTML, which takes input stream as argument and emits DOM.
@@ -28,15 +37,6 @@ use thiserror::Error;
 // Please check the following if you'd like to know about the parsing process more deeply:
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
-
-#[derive(Error, Debug, PartialEq)]
-pub enum HTMLParseError {
-    #[error("failed to construct DOM tree; {0}")]
-    InvalidDocumentError(DOMException),
-
-    #[error("failed to parse; {0}")]
-    InvalidResourceError(StringStreamError),
-}
 
 pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
     // NOTE: Here we assume the resource is HTML and encoded by UTF-8.

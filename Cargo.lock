@@ -1019,6 +1019,7 @@ dependencies = [
  "reqwest",
  "structopt",
  "thiserror",
+ "unicode-width",
  "url",
 ]
 

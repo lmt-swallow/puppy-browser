@@ -1,23 +1,13 @@
-use std::{env, path::PathBuf};
+use std::env;
 
 use crate::{
     cli::CommonOpts,
-    fetch::{self, Request},
-    html,
-    ui::{self, components::NavigationBar, ElementContainer},
+    ui::{self, BrowserView},
+    util,
 };
-use cursive::{
-    event::Key,
-    menu,
-    traits::{Boxable, Nameable},
-    views::{LinearLayout, Panel, ScrollView},
-    Cursive, CursiveRunnable,
-};
-use cursive::{logger, views::Dialog};
-#[allow(unused_imports)]
-use cursive_aligned_view::Alignable;
+use cursive::logger;
 
-use log::{error, info, set_max_level};
+use log::set_max_level;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -25,117 +15,16 @@ pub struct Opts {
     pub url: Option<String>,
 }
 
-fn enable_menubar(siv: &mut CursiveRunnable) {
-    siv.menubar()
-        .add_subtree(
-            "Operation",
-            menu::Tree::new().leaf("Toggle debug console", |s| {
-                s.toggle_debug_console();
-            }),
-        )
-        .add_subtree(
-            "Help",
-            menu::Tree::new().leaf("About", |s| {
-                s.add_layer(Dialog::info(format!("Puppy {}", env!("CARGO_PKG_VERSION"))))
-            }),
-        )
-        .add_delimiter()
-        .add_leaf("Quit", |s| s.quit());
-
-    siv.set_autohide_menu(false);
-    siv.add_global_callback(Key::Esc, |s| s.select_menubar());
-}
-
-pub fn navigate(s: &mut Cursive, url: String) {
-    info!("start to navigate to {}", url);
-
-    // TODO (enhancement): error handling
-    info!("clear the current view to render {}", url);
-    if s.call_on_name("content", |view: &mut ElementContainer| {
-        for _ in 0..view.len() {
-            view.remove_child(0);
-        }
-    })
-    .is_none()
-    {
-        error!(
-            "failed to clear the current view to render {}; no element container found",
-            url
-        );
-    }
-
-    // TODO (enhancement): error handling
-    info!("fetch a resource from {}", url);
-    let req = Request::new(url.clone());
-    let response = fetch::fetch(req);
-    if let Err(_e) = response {
-        error!("failed to fetch {}; {}", url, _e);
-        return;
-    }
-
-    // TODO (enhancement): error handling
-    info!("parse the resource from {}", url);
-    let document = html::parse(response.unwrap());
-    if let Err(_e) = document {
-        error!("failed to parse {}; {}", url, _e);
-        return;
-    }
-
-    // TODO (future): render with rendering tree instead of DOM itself.
-    info!("render the DOM of {}", url);
-    if s.call_on_name("content", |view: &mut ElementContainer| {
-        ui::render_node_from_document(view, &document.unwrap());
-    })
-    .is_none()
-    {
-        error!("failed to render {}; no element container found", url);
-    }
-}
-
-fn normalize_fileurl_with(mut current_dir: PathBuf, u: String) -> String {
-    if u.starts_with("http://") || u.starts_with("https://") {
-        u
-    } else {
-        if u.starts_with("/") {
-            format!("file://{}", u)
-        } else {
-            current_dir.push(u);
-            format!("file://{}", current_dir.to_str().unwrap())
-        }
-    }
-}
-
-#[test]
-fn test_normalize_fileurl_with() {
-    let pbuf = PathBuf::from("/tmp");
-    assert_eq!(
-        normalize_fileurl_with(pbuf.clone(), "http://example.com".to_string()),
-        "http://example.com"
-    );
-    assert_eq!(
-        normalize_fileurl_with(pbuf.clone(), "https://example.com/path/path2".to_string()),
-        "https://example.com/path/path2"
-    );
-    assert_eq!(
-        normalize_fileurl_with(pbuf.clone(), "/etc/passwd".to_string()),
-        "file:///etc/passwd"
-    );
-    assert_eq!(
-        normalize_fileurl_with(pbuf.clone(), "test/aa.html".to_string()),
-        "file:///tmp/test/aa.html"
-    );
-}
-
 pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     let start_url = opts
         .url
-        .and_then(|u| Some(normalize_fileurl_with(env::current_dir().unwrap(), u)))
+        .and_then(|u| Some(util::normalize_fileurl_with(env::current_dir().unwrap(), u)))
         .unwrap_or("http://example.com".to_string());
 
     // set up base
     let mut siv = cursive::default();
-    ui::theme::set_default_theme(&mut siv);
-    enable_menubar(&mut siv);
+    ui::theme::init_theme(&mut siv);
+    ui::menu::init_menu(&mut siv);
 
     // set up logger
     logger::init();
@@ -143,26 +32,12 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
         set_max_level(level.to_level_filter());
     }
 
-    // build window structure
-    let navbar = NavigationBar::new(start_url.clone()).on_navigation(|s, to| {
-        navigate(s, to);
-    });
-    let content = Panel::new(
-        ScrollView::new(
-            LinearLayout::vertical()
-                .with_name("content")
-                .full_height()
-                .full_screen(),
-        )
-        .full_screen(),
-    )
-    .full_screen();
-
-    let layer = LinearLayout::vertical().child(navbar).child(content);
-    siv.add_fullscreen_layer(layer);
-
-    // navigate to the first page
-    navigate(&mut siv, start_url.clone());
+    // prepare a window
+    let mut b = BrowserView::named();
+    if b.get_mut().navigate_to(start_url).is_err() {
+        return 1;
+    };
+    siv.add_fullscreen_layer(b);
 
     // start event loop
     siv.run();
