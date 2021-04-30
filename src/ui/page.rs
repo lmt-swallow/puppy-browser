@@ -1,4 +1,4 @@
-use super::components::Link;
+use super::components::{Link, TextInputView};
 use super::traits::Clearable;
 use crate::{
     dom::{Node, NodeType},
@@ -6,7 +6,7 @@ use crate::{
 };
 use cursive::{
     traits::Boxable,
-    views::{Button, EditView, LinearLayout, TextView},
+    views::{Button, LinearLayout, TextView},
 };
 use log::{debug, error, info};
 
@@ -55,7 +55,7 @@ pub fn render_node(view: &mut ElementContainer, node: &Node) {
             {
                 "text" => {
                     view.add_child(
-                        EditView::new()
+                        TextInputView::new()
                             .content(element.attributes.get("value").unwrap_or(&"".to_string()))
                             .min_width(10)
                             .max_width(10),

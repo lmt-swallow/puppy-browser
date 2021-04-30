@@ -9,3 +9,6 @@ pub use self::link::*;
 
 pub mod navigation;
 pub use self::navigation::*;
+
+pub mod input;
+pub use self::input::*;

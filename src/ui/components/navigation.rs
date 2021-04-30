@@ -1,13 +1,14 @@
 use std::{error::Error, rc::Rc};
 
 use cursive::{
-    theme::{BaseColor, Color, PaletteColor, Theme},
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
-    views::{Button, EditView, LinearLayout, Panel, ResizedView, ThemedView},
+    views::{Button, LinearLayout, Panel, ResizedView},
     Cursive, With,
 };
 use log::error;
+
+use super::TextInputView;
 
 pub static NAVIGATION_INPUT_NAME: &str = "navbar-input";
 pub static NAVIGATION_BUTTON_NAME: &str = "navbar-button";
@@ -18,25 +19,16 @@ pub struct NavigationBar {
 
 impl NavigationBar {
     pub fn new(default_value: String) -> NavigationBar {
-        let theme = Theme::default().with(|theme| {
-            theme.palette[PaletteColor::Primary] = Color::Dark(BaseColor::Black);
-            theme.palette[PaletteColor::View] = Color::Dark(BaseColor::Black);
-            theme.palette[PaletteColor::Secondary] = Color::Dark(BaseColor::White);
-        });
-
         NavigationBar {
             view: LinearLayout::vertical().child(
                 ResizedView::with_full_width(
                     LinearLayout::horizontal()
-                        .child(Panel::new(ThemedView::new(
-                            theme,
-                            ResizedView::with_fixed_height(
-                                1,
-                                EditView::new()
-                                    .content(default_value)
-                                    .with_name(NAVIGATION_INPUT_NAME)
-                                    .full_width(),
-                            ),
+                        .child(Panel::new(ResizedView::with_fixed_height(
+                            1,
+                            TextInputView::new()
+                                .content(default_value)
+                                .with_name(NAVIGATION_INPUT_NAME)
+                                .full_width(),
                         )))
                         .child(Panel::new(
                             Button::new("Go", |_s: &mut Cursive| {})
@@ -66,7 +58,7 @@ impl NavigationBar {
         let cb_input = callback.clone();
         if self
             .view
-            .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut EditView| {
+            .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut TextInputView| {
                 view.set_on_submit(move |s, text| {
                     cb_input(s, text.to_string());
                 });
@@ -83,7 +75,7 @@ impl NavigationBar {
                 view.set_callback(move |s| {
                     match s
                         .screen_mut()
-                        .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut EditView| {
+                        .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut TextInputView| {
                             view.get_content()
                         }) {
                         Some(url) => cb_button(s, url.to_string()),
@@ -100,7 +92,7 @@ impl NavigationBar {
     pub fn set_url(&mut self, url: String) {
         if self
             .view
-            .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut EditView| {
+            .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut TextInputView| {
                 view.set_content(url);
             })
             .is_none()
@@ -112,7 +104,7 @@ impl NavigationBar {
     pub fn get_url(&mut self) -> Result<String, Box<dyn Error>> {
         let result = self
             .view
-            .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut EditView| {
+            .call_on_name(NAVIGATION_INPUT_NAME, |view: &mut TextInputView| {
                 view.get_content()
             })
             .ok_or("failed to find input bar")?;
