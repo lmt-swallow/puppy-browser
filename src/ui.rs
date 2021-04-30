@@ -1,8 +1,5 @@
 pub mod components;
 
-pub mod page;
-pub use self::page::*;
-
 pub mod theme;
 
 pub mod menu;

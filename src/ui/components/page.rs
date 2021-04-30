@@ -1,22 +1,28 @@
-use super::components::{Link, TextInputView};
-use super::traits::Clearable;
+use super::super::components::{Link, TextInputView};
 use crate::{
     dom::{Node, NodeType},
-    ui::browser_view::{with_current_browser_view, BrowserView},
+    ui::{browser_view::with_current_browser_view, traits::Clearable, BrowserView},
 };
 use cursive::{
     traits::Boxable,
+    view::ViewWrapper,
     views::{Button, LinearLayout, TextView},
 };
 use log::{debug, error, info};
 
-pub type ElementContainer = LinearLayout;
+type ElementContainer = LinearLayout;
 
 impl Clearable for ElementContainer {
     fn clear(&mut self) {
         for _ in 0..self.len() {
             self.remove_child(0);
         }
+    }
+}
+
+impl Clearable for PageView {
+    fn clear(&mut self) {
+        self.view.clear()
     }
 }
 
@@ -99,15 +105,52 @@ pub fn render_node(view: &mut ElementContainer, node: &Node) {
     }
 }
 
-pub fn render_node_from_document(view: &mut ElementContainer, node: &Node) {
-    debug!("{:?}", node);
-    match node.node_type {
-        NodeType::Document(ref _document) => {
-            assert_eq!(node.child_nodes.len(), 1);
-            if let Some(top_elem) = node.child_nodes.get(0) {
-                render_node(view, top_elem);
-            }
+pub struct PageView {
+    view: LinearLayout,
+}
+
+impl PageView {
+    pub fn new() -> Self {
+        PageView {
+            view: LinearLayout::vertical(),
         }
-        _ => {}
+    }
+
+    pub fn render_document(&mut self, node: &Node) {
+        debug!("{:?}", node);
+        match node.node_type {
+            NodeType::Document(ref _document) => {
+                assert_eq!(node.child_nodes.len(), 1);
+                if let Some(top_elem) = node.child_nodes.get(0) {
+                    render_node(&mut self.view, top_elem);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+impl ViewWrapper for PageView {
+    type V = LinearLayout;
+
+    fn with_view<F, R>(&self, f: F) -> ::std::option::Option<R>
+    where
+        F: FnOnce(&Self::V) -> R,
+    {
+        Some(f(&self.view))
+    }
+
+    fn with_view_mut<F, R>(&mut self, f: F) -> ::std::option::Option<R>
+    where
+        F: ::std::ops::FnOnce(&mut Self::V) -> R,
+    {
+        Some(f(&mut self.view))
+    }
+
+    fn into_inner(self) -> ::std::result::Result<Self::V, Self>
+    where
+        Self::V: ::std::marker::Sized,
+    {
+        Ok(self.view)
     }
 }

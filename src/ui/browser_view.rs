@@ -12,7 +12,7 @@ use log::error;
 use crate::{
     fetch::{fetch, Request},
     html,
-    ui::ElementContainer,
+    ui::components::PageView,
     url,
 };
 
@@ -44,7 +44,7 @@ impl BrowserView {
                 .child(
                     Panel::new(
                         ScrollView::new(
-                            LinearLayout::vertical()
+                            PageView::new()
                                 .with_name(PAGE_VIEW_NAME)
                                 .full_height()
                                 .full_screen(),
@@ -88,7 +88,7 @@ impl BrowserView {
             ))?;
 
         self.view
-            .call_on_name(PAGE_VIEW_NAME, |view: &mut ElementContainer| view.clear())
+            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| view.clear())
             .ok_or(format!(
                 "failed to clear the current view to render {}; no element container found",
                 absolute_url
@@ -98,8 +98,8 @@ impl BrowserView {
         let document = html::parse(response)?;
 
         self.view
-            .call_on_name(PAGE_VIEW_NAME, |view: &mut ElementContainer| {
-                super::render_node_from_document(view, &document);
+            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
+                view.render_document(&document);
             })
             .ok_or(format!(
                 "failed to render {}; no element container found",

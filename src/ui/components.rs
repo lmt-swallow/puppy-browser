@@ -12,3 +12,6 @@ pub use self::navigation::*;
 
 pub mod input;
 pub use self::input::*;
+
+pub mod page;
+pub use self::page::*;
