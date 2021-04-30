@@ -6,7 +6,7 @@ use cursive::{
     theme::{BaseColor, Color, PaletteColor, Theme},
     traits::Finder,
     view::{CannotFocus, Nameable, Resizable, Selector, ViewNotFound},
-    views::{Button, EditView, LinearLayout, Panel, ResizedView, ThemedView, ViewRef},
+    views::{Button, EditView, LinearLayout, Panel, ResizedView, ThemedView},
     Cursive, Printer, Rect, Vec2, View, With, XY,
 };
 
@@ -43,7 +43,7 @@ impl NavigationBar {
                                 ),
                             )))
                             .child(Panel::new(
-                                Button::new("Go", |s: &mut Cursive| {})
+                                Button::new("Go", |_s: &mut Cursive| {})
                                     .with_name("navbar-button")
                                     .fixed_width(5)
                                     .fixed_height(1),

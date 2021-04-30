@@ -1,7 +1,5 @@
-use std::error::Error;
-
 use crate::dom::{AttrMap, DOMException, Document, Element, Node, Text};
-use crate::source::Source;
+use crate::fetch::Response;
 #[allow(unused_imports)]
 use combine::EasyParser;
 use combine::{
@@ -40,10 +38,12 @@ pub enum HTMLParseError {
     InvalidResourceError(StringStreamError),
 }
 
-pub fn parse(source: Source) -> Result<Node, HTMLParseError> {
-    // TODO (enhancement): Determine character encoding as follows:
-    // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-stream
-    let body = String::from_utf8(source.data).unwrap();
+pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
+    // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
+    // We should determine character encoding as follows:
+    // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
+    let body = String::from_utf8(response.data).unwrap();
+
     let nodes = nodes().parse(&body as &str);
     match nodes {
         Ok((nodes, _)) => {
@@ -53,8 +53,8 @@ pub fn parse(source: Source) -> Result<Node, HTMLParseError> {
                 vec![Element::new("html".to_string(), AttrMap::new(), nodes)]
             };
             match Document::new(
-                source.from_url.clone(),
-                source.from_url.clone(),
+                response.url.to_string(),
+                response.url.to_string(),
                 child_nodes,
             ) {
                 Ok(document_node) => Ok(document_node),
@@ -172,9 +172,14 @@ parser! {
 
 #[cfg(test)]
 mod tests {
+    use url::Url;
+
     use super::*;
-    use crate::dom::{AttrMap, Document, Element, Text};
-    use crate::source::Source;
+    use crate::fetch::{HeaderMap, Response};
+    use crate::{
+        dom::{AttrMap, Document, Element, Text},
+        fetch::{HTTPStatus, ResponseType},
+    };
 
     // parsing tests of attributes
     #[test]
@@ -287,14 +292,17 @@ mod tests {
     #[test]
     fn test_parse_single_without_nest() {
         let url = "http://example.com";
-        let s = Source {
-            from_url: url.to_string(),
+        let s = Response {
+            url: Url::parse(url).unwrap(),
+            status: HTTPStatus::OK,
+            rtype: ResponseType::Basic,
+            headers: HeaderMap::new(),
             data: "<p>Hello World</p>".as_bytes().to_vec(),
         };
         let got = parse(s);
         let expected: Result<Node, HTMLParseError> = Ok(Document::new(
-            url.to_string(),
-            url.to_string(),
+            Url::parse(url).unwrap().to_string(),
+            Url::parse(url).unwrap().to_string(),
             vec![Element::new(
                 "p".to_string(),
                 AttrMap::new(),
@@ -308,15 +316,18 @@ mod tests {
     #[test]
     fn test_parse_two_without_nest() {
         let url = "http://example.com";
-        let s = Source {
-            from_url: url.to_string(),
+        let s = Response {
+            url: Url::parse(url).unwrap(),
+            status: HTTPStatus::OK,
+            rtype: ResponseType::Basic,
+            headers: HeaderMap::new(),
             data: "<p>Hello World (1)</p><p>Hello World (2)</p>"
                 .as_bytes()
                 .to_vec(),
         };
         let expected = Ok(Document::new(
-            url.to_string(),
-            url.to_string(),
+            Url::parse(url).unwrap().to_string(),
+            Url::parse(url).unwrap().to_string(),
             vec![Element::new(
                 "html".to_string(),
                 AttrMap::new(),
@@ -341,15 +352,18 @@ mod tests {
     #[test]
     fn test_parse_with_nest() {
         let url = "http://example.com";
-        let s = Source {
-            from_url: url.to_string(),
+        let s = Response {
+            url: Url::parse(url).unwrap(),
+            status: HTTPStatus::OK,
+            rtype: ResponseType::Basic,
+            headers: HeaderMap::new(),
             data: "<div><p>nested (1)</p><p>nested (2)</p></div>"
                 .as_bytes()
                 .to_vec(),
         };
         let expected = Ok(Document::new(
-            url.to_string(),
-            url.to_string(),
+            Url::parse(url).unwrap().to_string(),
+            Url::parse(url).unwrap().to_string(),
             vec![Element::new(
                 "div".to_string(),
                 AttrMap::new(),
