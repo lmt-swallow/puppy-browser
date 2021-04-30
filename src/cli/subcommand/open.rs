@@ -1,6 +1,6 @@
 use crate::{
     cli::CommonOpts,
-    html, source,
+    html, resource,
     ui::{self, components::NavigationBar, ElementContainer},
 };
 use cursive::{
@@ -48,7 +48,7 @@ pub fn navigate(s: &mut Cursive, url: String) {
 
     // TODO (enhancement): error handling
     info!("fetch a resource from {}", url);
-    let source = source::fetch(&url);
+    let source = resource::fetch(&url);
     if let Err(_e) = source {
         error!("failed to fetch {}; {}", url, _e);
         return;

@@ -1,5 +1,5 @@
 pub mod cli;
 mod dom;
 mod html;
-mod source;
+mod resource;
 mod ui;
