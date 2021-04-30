@@ -1,8 +1,4 @@
-use crate::{
-    cli::CommonOpts,
-    html, resource,
-    ui::{self, components::NavigationBar, ElementContainer},
-};
+use crate::{cli::CommonOpts, fetch::{self, Request}, html, ui::{self, components::NavigationBar, ElementContainer}};
 use cursive::{
     event::Key,
     menu,
@@ -48,15 +44,16 @@ pub fn navigate(s: &mut Cursive, url: String) {
 
     // TODO (enhancement): error handling
     info!("fetch a resource from {}", url);
-    let source = resource::fetch(&url);
-    if let Err(_e) = source {
+    let req = Request::new(url.clone());
+    let response = fetch::fetch(req);
+    if let Err(_e) = response {
         error!("failed to fetch {}; {}", url, _e);
         return;
     }
 
     // TODO (enhancement): error handling
     info!("parse the resource from {}", url);
-    let document = html::parse(source.unwrap());
+    let document = html::parse(response.unwrap());
     if let Err(_e) = document {
         error!("failed to parse {}; {}", url, _e);
         return;
