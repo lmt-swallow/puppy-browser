@@ -17,7 +17,7 @@ cargo run -- help
 You can install puppy by the following command(s):
 
 ```sh
-cargo install --path . --force
+cargo install --locked --path . --force
 ```
 
 After you have successfully installed puppy, you can see help as follows:
