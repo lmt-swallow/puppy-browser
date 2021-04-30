@@ -1,12 +1,14 @@
+use super::components::Link;
 use super::traits::Clearable;
-use crate::dom::{Node, NodeType};
+use crate::{
+    dom::{Node, NodeType},
+    ui::browser_view::{with_current_browser_view, BrowserView},
+};
 use cursive::{
     traits::Boxable,
     views::{Button, EditView, LinearLayout, TextView},
 };
-use log::{debug, info};
-
-use super::{components::Link, resolve_and_navigate};
+use log::{debug, error, info};
 
 pub type ElementContainer = LinearLayout;
 
@@ -35,7 +37,14 @@ pub fn render_node(view: &mut ElementContainer, node: &Node) {
                     .unwrap_or(&"".to_string())
                     .to_string();
                 view.add_child(Link::new(node.inner_text(), move |s| {
-                    resolve_and_navigate(s, link_href.clone())
+                    if with_current_browser_view(s, |b: &mut BrowserView| {
+                        b.resolve_url(link_href.clone())
+                            .and_then(|url| b.navigate_to(url))
+                    })
+                    .is_none()
+                    {
+                        error!("failed to initiate navigation by link")
+                    }
                 }));
             }
             "input" => match element

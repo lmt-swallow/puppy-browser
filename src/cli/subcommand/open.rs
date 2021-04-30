@@ -2,16 +2,10 @@ use std::env;
 
 use crate::{
     cli::CommonOpts,
-    ui::{self, navigate, navigation::NavigationBar},
+    ui::{self, BrowserView},
     util,
 };
 use cursive::logger;
-use cursive::{
-    traits::{Boxable, Nameable},
-    views::{LinearLayout, Panel, ScrollView},
-};
-#[allow(unused_imports)]
-use cursive_aligned_view::Alignable;
 
 use log::set_max_level;
 use structopt::StructOpt;
@@ -39,25 +33,11 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     }
 
     // prepare a window
-    let navbar = NavigationBar::new(start_url.clone()).on_navigation(|s, to| {
-        navigate(s, to);
-    });
-    let content = Panel::new(
-        ScrollView::new(
-            LinearLayout::vertical()
-                .with_name("content")
-                .full_height()
-                .full_screen(),
-        )
-        .full_screen(),
-    )
-    .full_screen();
-
-    let window = LinearLayout::vertical().child(navbar).child(content);
-    siv.add_fullscreen_layer(window);
-
-    // navigate to the first page
-    navigate(&mut siv, start_url.clone());
+    let mut b = BrowserView::named();
+    if b.get_mut().navigate_to(start_url).is_err() {
+        return 1;
+    };
+    siv.add_fullscreen_layer(b);
 
     // start event loop
     siv.run();
