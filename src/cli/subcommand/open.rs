@@ -1,4 +1,8 @@
-use crate::{cli::CommonOpts, html, source, ui::{self, ElementContainer, components::NavigationBar}};
+use crate::{
+    cli::CommonOpts,
+    html, source,
+    ui::{self, components::NavigationBar, ElementContainer},
+};
 use cursive::{
     event::Key,
     menu,
@@ -58,9 +62,13 @@ pub fn navigate(s: &mut Cursive, url: String) {
         return;
     }
 
-    // TODO (future): rendering tree construction
+    // TODO (future): render with rendering tree instead of DOM itself.
     info!("render the DOM of {}", url);
     if s.call_on_name("content", |view: &mut ElementContainer| {
+        for i in 0..view.len() {
+            view.remove_child(0);
+        }
+
         ui::render_node_from_document(view, &document.unwrap());
     })
     .is_none()

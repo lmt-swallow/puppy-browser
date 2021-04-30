@@ -17,7 +17,7 @@ use combine::{
 };
 use thiserror::Error;
 
-/ [NOTE] Specification on HTML parsing: https://html.spec.whatwg.org/multipage/parsing.html#parsing
+// [NOTE] Specification on HTML parsing: https://html.spec.whatwg.org/multipage/parsing.html#parsing
 //
 // The specification defines parsing algorithm of HTML, which takes input stream as argument and emits DOM.
 // It consists of the following two stages:
