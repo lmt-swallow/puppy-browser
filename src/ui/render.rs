@@ -1,6 +1,6 @@
 use crate::dom::{Node, NodeType};
 use cursive::views::{LinearLayout, TextView};
-use log::info;
+use log::debug;
 
 pub type ElementContainer = LinearLayout;
 
@@ -19,7 +19,11 @@ pub fn render_node(view: &mut ElementContainer, node: &Node) {
                     render_node(view, node);
                 }
             }
-            _ => (),
+            _ => {
+                for node in node.child_nodes.iter() {
+                    render_node(view, node);
+                }
+            }
         },
         NodeType::Text(ref t) => {
             view.add_child(TextView::new(&t.data));
@@ -29,6 +33,7 @@ pub fn render_node(view: &mut ElementContainer, node: &Node) {
 }
 
 pub fn render_node_from_document(view: &mut ElementContainer, node: &Node) {
+    debug!("{:?}", node);
     match node.node_type {
         NodeType::Document(ref _document) => {
             assert_eq!(node.child_nodes.len(), 1);

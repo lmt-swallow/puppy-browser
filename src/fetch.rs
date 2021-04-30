@@ -4,6 +4,7 @@ use num_derive::{self, FromPrimitive};
 use std::fs;
 use std::{collections::HashMap, fmt, str::FromStr};
 use thiserror::Error;
+use reqwest;
 
 #[derive(Debug, PartialEq, FromPrimitive)]
 pub enum HTTPStatus {
@@ -121,13 +122,18 @@ pub fn fetch(request: Request) -> Result<Response, FetchError> {
                         "[http(s):] remote resource at {} is requested.",
                         u.to_string()
                     );
-                    Ok(Response {
-                        url: u,
-                        status: HTTPStatus::OK,
-                        rtype: ResponseType::Basic,
-                        headers: HeaderMap::new(),
-                        data: "<p>TODO (unimplemented)</p>".as_bytes().to_vec(),
-                    })
+                    match reqwest::blocking::get(u.to_string()).and_then(|resp|resp.bytes()){
+                        Ok(content)=>{
+                            Ok(Response {
+                                url: u,
+                                status: HTTPStatus::OK,
+                                rtype: ResponseType::Basic,
+                                headers: HeaderMap::new(),
+                                data: content.to_vec(),
+                            })        
+                        },
+                        Err(_e) => Err(FetchError::NetworkError { response: None }),
+                    }
                 }
                 unsupported_scheme => {
                     // TODO (enhancement): set appropriate response

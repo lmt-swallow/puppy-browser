@@ -1,4 +1,11 @@
-use crate::{cli::CommonOpts, fetch::{self, Request}, html, ui::{self, components::NavigationBar, ElementContainer}};
+use std::env;
+
+use crate::{
+    cli::CommonOpts,
+    fetch::{self, Request},
+    html,
+    ui::{self, components::NavigationBar, ElementContainer},
+};
 use cursive::{
     event::Key,
     menu,
@@ -51,7 +58,10 @@ pub fn navigate(s: &mut Cursive, url: String) {
     })
     .is_none()
     {
-        error!("failed to clear the current view to render {}; no element container found", url);
+        error!(
+            "failed to clear the current view to render {}; no element container found",
+            url
+        );
     }
 
     // TODO (enhancement): error handling
@@ -82,8 +92,21 @@ pub fn navigate(s: &mut Cursive, url: String) {
     }
 }
 
+fn normalize_initial_url(u: String) -> String {
+    if !u.starts_with("http://") || !u.starts_with("https://") | !u.starts_with("/") {
+        let mut current_dir = env::current_dir().unwrap();
+        current_dir.push(u);
+        format!("file://{}", current_dir.to_str().unwrap())
+    } else {
+        u
+    }
+}
+
 pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
-    let start_url = opts.url.unwrap_or("http://example.com".to_string());
+    let start_url = opts
+        .url
+        .and_then(|u| Some(normalize_initial_url(u)))
+        .unwrap_or("http://example.com".to_string());
 
     // set up base
     let mut siv = cursive::default();

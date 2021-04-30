@@ -6,7 +6,7 @@ use cursive::{
     theme::{BaseColor, Color, PaletteColor, Theme},
     traits::Finder,
     view::{CannotFocus, Nameable, Resizable, Selector, ViewNotFound},
-    views::{Button, EditView, LinearLayout, Panel, ResizedView, ThemedView, ViewRef},
+    views::{Button, EditView, LinearLayout, Panel, ResizedView, ThemedView},
     Cursive, Printer, Rect, Vec2, View, With, XY,
 };
 
