@@ -1,3 +1,4 @@
+use super::traits::Clearable;
 use crate::dom::{Node, NodeType};
 use cursive::{
     traits::Boxable,
@@ -8,6 +9,14 @@ use log::{debug, info};
 use super::{components::Link, resolve_and_navigate};
 
 pub type ElementContainer = LinearLayout;
+
+impl Clearable for ElementContainer {
+    fn clear(&mut self) {
+        for _ in 0..self.len() {
+            self.remove_child(0);
+        }
+    }
+}
 
 pub fn render_node(view: &mut ElementContainer, node: &Node) {
     match node.node_type {

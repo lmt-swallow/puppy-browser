@@ -1,9 +1,13 @@
 pub mod components;
 
-pub mod render;
-pub use self::render::*;
+pub mod page;
+pub use self::page::*;
 
-pub mod navigate;
-pub use self::navigate::*;
+pub mod navigation;
+pub use self::navigation::*;
 
 pub mod theme;
+
+pub mod menu;
+
+pub mod traits;

@@ -2,17 +2,14 @@ use std::env;
 
 use crate::{
     cli::CommonOpts,
-    ui::{self, components::NavigationBar, navigate},
+    ui::{self, navigate, navigation::NavigationBar},
     util,
 };
+use cursive::logger;
 use cursive::{
-    event::Key,
-    menu,
     traits::{Boxable, Nameable},
     views::{LinearLayout, Panel, ScrollView},
-    CursiveRunnable,
 };
-use cursive::{logger, views::Dialog};
 #[allow(unused_imports)]
 use cursive_aligned_view::Alignable;
 
@@ -24,27 +21,6 @@ pub struct Opts {
     pub url: Option<String>,
 }
 
-fn enable_menubar(siv: &mut CursiveRunnable) {
-    siv.menubar()
-        .add_subtree(
-            "Operation",
-            menu::Tree::new().leaf("Toggle debug console", |s| {
-                s.toggle_debug_console();
-            }),
-        )
-        .add_subtree(
-            "Help",
-            menu::Tree::new().leaf("About", |s| {
-                s.add_layer(Dialog::info(format!("Puppy {}", env!("CARGO_PKG_VERSION"))))
-            }),
-        )
-        .add_delimiter()
-        .add_leaf("Quit", |s| s.quit());
-
-    siv.set_autohide_menu(false);
-    siv.add_global_callback(Key::Esc, |s| s.select_menubar());
-}
-
 pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     let start_url = opts
         .url
@@ -53,8 +29,8 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
 
     // set up base
     let mut siv = cursive::default();
-    ui::theme::set_default_theme(&mut siv);
-    enable_menubar(&mut siv);
+    ui::theme::init_theme(&mut siv);
+    ui::menu::init_menu(&mut siv);
 
     // set up logger
     logger::init();
@@ -62,7 +38,7 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
         set_max_level(level.to_level_filter());
     }
 
-    // build window structure
+    // prepare a window
     let navbar = NavigationBar::new(start_url.clone()).on_navigation(|s, to| {
         navigate(s, to);
     });
@@ -77,8 +53,8 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     )
     .full_screen();
 
-    let layer = LinearLayout::vertical().child(navbar).child(content);
-    siv.add_fullscreen_layer(layer);
+    let window = LinearLayout::vertical().child(navbar).child(content);
+    siv.add_fullscreen_layer(window);
 
     // navigate to the first page
     navigate(&mut siv, start_url.clone());
