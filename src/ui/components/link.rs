@@ -15,7 +15,8 @@ use unicode_width::UnicodeWidthStr;
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
+/// use puppy::ui::components::link::Link;
 /// let page_link = Link::new("Quit", |s| s.quit());
 /// ```
 
@@ -64,6 +65,7 @@ impl Link {
     /// # Examples
     ///
     /// ```rust
+    /// use puppy::ui::components::link::Link;
     /// let link = Link::new("Here", |s| s.quit());
     /// assert_eq!(link.label(), "Here");
     /// ```
@@ -78,6 +80,7 @@ impl Link {
     /// # Examples
     ///
     /// ```
+    /// use puppy::ui::components::link::Link;
     /// let mut link = Link::new("Quit", |s| s.quit());
     /// link.set_label("Escape");
     /// ```
