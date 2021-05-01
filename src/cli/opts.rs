@@ -20,5 +20,7 @@ pub struct CommonOpts {
 #[derive(StructOpt, Debug)]
 pub enum SubCommand {
     Open(open::Opts),
-    Completion(completion::Opts),
+    Completion(completion::Opts),    
+    #[structopt(name = "js")]
+    JavaScript,
 }

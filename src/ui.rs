@@ -1,7 +1,5 @@
 pub mod components;
 
-pub mod theme;
-
 pub mod menu;
 
 pub mod traits;

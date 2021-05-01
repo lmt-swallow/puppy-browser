@@ -43,3 +43,16 @@ You can run tests with the following command(s):
 ```sh
 cargo test
 ```
+
+## How to speed up build process
+
+You can cache V8-related files for build as follows:
+
+```bash
+$ export RUSTY_V8_MIRROR=$HOME/.cache/rusty_v8
+(...omitted...)
+$ ./scripts/prepare-v8.sh
+(...omitted...)
+$ cargo build
+(...omitted...)
+```
