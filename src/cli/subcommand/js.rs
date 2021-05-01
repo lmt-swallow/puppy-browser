@@ -1,7 +1,14 @@
-use crate::{cli::CommonOpts, js::JavaScriptRuntime};
+use crate::{
+    cli::{logger, CommonOpts},
+    js::JavaScriptRuntime,
+};
 use std::io::{self, Write};
 
-pub fn run(_common_opts: CommonOpts) -> i32 {
+pub fn run(common_opts: CommonOpts) -> i32 {
+    if let Some(level) = common_opts.verbose.log_level() {
+        logger::setup_logger(level).unwrap();
+    }
+
     let mut runtime = JavaScriptRuntime::new();
 
     loop {
