@@ -8,7 +8,7 @@ use cursive::{
     view::ViewWrapper,
     views::{Button, LinearLayout, TextView},
 };
-use log::{debug, error, info};
+use log::{error, info};
 
 type ElementContainer = LinearLayout;
 
@@ -23,6 +23,58 @@ impl Clearable for ElementContainer {
 impl Clearable for PageView {
     fn clear(&mut self) {
         self.view.clear()
+    }
+}
+
+pub struct PageView {
+    view: LinearLayout,
+    document: Option<Node>,
+}
+
+impl PageView {
+    pub fn new() -> Self {
+        PageView {
+            view: LinearLayout::vertical(),
+            document: None,
+        }
+    }
+
+    pub fn render_document(&mut self, node: Node) {
+        match node.node_type {
+            NodeType::Document(ref _document) => {
+                assert_eq!(node.child_nodes.len(), 1);
+                if let Some(top_elem) = node.child_nodes.get(0) {
+                    render_node(&mut self.view, top_elem);
+                }
+            }
+            _ => {}
+        };
+        self.document = Some(node);
+    }
+}
+
+impl ViewWrapper for PageView {
+    type V = LinearLayout;
+
+    fn with_view<F, R>(&self, f: F) -> ::std::option::Option<R>
+    where
+        F: FnOnce(&Self::V) -> R,
+    {
+        Some(f(&self.view))
+    }
+
+    fn with_view_mut<F, R>(&mut self, f: F) -> ::std::option::Option<R>
+    where
+        F: ::std::ops::FnOnce(&mut Self::V) -> R,
+    {
+        Some(f(&mut self.view))
+    }
+
+    fn into_inner(self) -> ::std::result::Result<Self::V, Self>
+    where
+        Self::V: ::std::marker::Sized,
+    {
+        Ok(self.view)
     }
 }
 
@@ -102,55 +154,5 @@ pub fn render_node(view: &mut ElementContainer, node: &Node) {
             view.add_child(TextView::new(&t.data));
         }
         _ => {}
-    }
-}
-
-pub struct PageView {
-    view: LinearLayout,
-}
-
-impl PageView {
-    pub fn new() -> Self {
-        PageView {
-            view: LinearLayout::vertical(),
-        }
-    }
-
-    pub fn render_document(&mut self, node: &Node) {
-        debug!("{:?}", node);
-        match node.node_type {
-            NodeType::Document(ref _document) => {
-                assert_eq!(node.child_nodes.len(), 1);
-                if let Some(top_elem) = node.child_nodes.get(0) {
-                    render_node(&mut self.view, top_elem);
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
-impl ViewWrapper for PageView {
-    type V = LinearLayout;
-
-    fn with_view<F, R>(&self, f: F) -> ::std::option::Option<R>
-    where
-        F: FnOnce(&Self::V) -> R,
-    {
-        Some(f(&self.view))
-    }
-
-    fn with_view_mut<F, R>(&mut self, f: F) -> ::std::option::Option<R>
-    where
-        F: ::std::ops::FnOnce(&mut Self::V) -> R,
-    {
-        Some(f(&mut self.view))
-    }
-
-    fn into_inner(self) -> ::std::result::Result<Self::V, Self>
-    where
-        Self::V: ::std::marker::Sized,
-    {
-        Ok(self.view)
     }
 }
