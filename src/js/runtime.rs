@@ -1,12 +1,17 @@
-use crate::js::binding;
+use crate::{js::binding, window::Window};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
 
+#[derive(Debug)]
 pub struct JavaScriptRuntimeState {
     pub context: v8::Global<v8::Context>,
+
+    // TODO (enhancement): remove this by GothamState like Deno does.
+    pub window: Option<Rc<RefCell<Window>>>,
 }
 
+#[derive(Debug)]
 pub struct JavaScriptRuntime {
     pub v8_isolate: v8::OwnedIsolate,
 }
@@ -39,6 +44,7 @@ impl JavaScriptRuntime {
         // NOTE: the data would be stored by Isolate::SetData (https://v8docs.nodesource.com/node-4.8/d5/dda/classv8_1_1_isolate.html#a7acadfe7965997e9c386a05f098fbe36)
         isolate.set_slot(Rc::new(RefCell::new(JavaScriptRuntimeState {
             context: context,
+            window: None,
         })));
 
         JavaScriptRuntime {
@@ -46,23 +52,36 @@ impl JavaScriptRuntime {
         }
     }
 
-    pub fn state(&self) -> Rc<RefCell<JavaScriptRuntimeState>> {
-        let s = self
-            .v8_isolate
+    pub fn state(isolate: &v8::Isolate) -> Rc<RefCell<JavaScriptRuntimeState>> {
+        let s = isolate
             .get_slot::<Rc<RefCell<JavaScriptRuntimeState>>>()
             .unwrap();
         s.clone()
     }
 
-    pub fn context(&mut self) -> v8::Global<v8::Context> {
-        let state = self.state();
+    pub fn get_state(&self) -> Rc<RefCell<JavaScriptRuntimeState>> {
+        JavaScriptRuntime::state(&self.v8_isolate)
+    }
+
+    pub fn get_handle_scope(&mut self) -> v8::HandleScope {
+        let context = self.get_context();
+        v8::HandleScope::with_context(&mut self.v8_isolate, context)
+    }
+
+    pub fn get_context(&mut self) -> v8::Global<v8::Context> {
+        let state = self.get_state();
         let state = state.borrow();
         state.context.clone()
     }
 
-    pub fn handle_scope(&mut self) -> v8::HandleScope {
-        let context = self.context();
-        v8::HandleScope::with_context(&mut self.v8_isolate, context)
+    pub fn get_window(&mut self) -> Option<Rc<RefCell<Window>>> {
+        let state = self.get_state();
+        let state = state.borrow();
+        state.window.clone()
+    }
+
+    pub fn set_window(&mut self, window: Rc<RefCell<Window>>) {
+        self.get_state().borrow_mut().window = Some(window);
     }
 
     pub fn execute(
@@ -70,7 +89,7 @@ impl JavaScriptRuntime {
         filename: &str,
         source: &str,
     ) -> Result<String, JavaScriptRuntimeError> {
-        let scope = &mut self.handle_scope();
+        let scope = &mut self.get_handle_scope();
 
         let source = v8::String::new(scope, source).unwrap();
         let source_map = v8::undefined(scope);

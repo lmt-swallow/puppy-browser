@@ -88,7 +88,9 @@ impl BrowserView {
             ))?;
 
         self.view
-            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| view.clear())
+            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
+                view.clear();
+            })
             .ok_or(format!(
                 "failed to clear the current view to render {}; no element container found",
                 absolute_url
@@ -99,12 +101,12 @@ impl BrowserView {
 
         self.view
             .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
-                view.render_document(document);
+                view.render_document(document)
             })
             .ok_or(format!(
                 "failed to render {}; no element container found",
                 absolute_url
-            ))?;
+            ))??;
 
         Ok(())
     }
