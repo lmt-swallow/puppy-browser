@@ -2,10 +2,10 @@ use cursive::{
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
     views::{LinearLayout, NamedView, Panel, ScrollView},
-    CbSink, Cursive, View, With,
+    CbSink, Cursive, With,
 };
 use log::error;
-use std::{cell::RefCell, error::Error, rc::Rc};
+use std::{error::Error, rc::Rc};
 
 use crate::{
     fetch::{fetch, Request},
@@ -21,23 +21,23 @@ pub static PAGE_VIEW_CONTAINER_NAME: &str = "browser-view-page-container";
 
 pub struct BrowserView {
     view: LinearLayout,
-    ui_cb_sink: Rc<RefCell<CbSink>>,
+    ui_cb_sink: Rc<CbSink>,
 }
 
 impl BrowserView {
-    pub fn named(ui_cb_sink: Rc<RefCell<CbSink>>) -> NamedView<Self> {
+    pub fn named(ui_cb_sink: Rc<CbSink>) -> NamedView<Self> {
         (BrowserView {
             ui_cb_sink: ui_cb_sink.clone(),
             view: LinearLayout::vertical(),
         })
         .with(|view| {
-            view.add_navigation_container();
-            view.add_page_container();
+            view.add_named_navigation_container();
+            view.add_named_page_container();
         })
         .with_name(BROWSER_VIEW_NAME)
     }
 
-    fn add_navigation_container(&mut self) {
+    fn add_named_navigation_container(&mut self) {
         self.view.add_child(
             NavigationView::new("".to_string())
                 .on_navigation(|s, to| {
@@ -51,7 +51,7 @@ impl BrowserView {
         )
     }
 
-    fn add_page_container(&mut self) {
+    fn add_named_page_container(&mut self) {
         self.view.add_child(
             Panel::new(
                 ScrollView::new(
@@ -112,7 +112,7 @@ impl BrowserView {
         ))?;
 
         // add a new PageView instance
-        self.add_page_container();
+        self.add_named_page_container();
 
         // fetch & parse document
         let response = fetch(Request::new(absolute_url.clone()))?;

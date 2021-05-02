@@ -1,10 +1,10 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, error::Error, rc::Rc};
 
 use crate::{
     dom::{Node, NodeType},
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
     tui::{
-        components::{Link, TextInputView},
+        components::{alert, Link, TextInputView},
         views::{with_current_browser_view, BrowserView},
     },
     window::Window,
@@ -169,24 +169,53 @@ fn render_node(
     }
 }
 
+pub struct PageViewAPIHandler {
+    ui_cb_sink: Rc<CbSink>,
+}
+
+impl PageViewAPIHandler {
+    pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
+        Self {
+            ui_cb_sink: ui_cb_sink,
+        }
+    }
+
+    pub fn alert(&self, message: String) -> Result<(), Box<dyn Error>> {
+        self.ui_cb_sink
+            .send(Box::new(move |s: &mut cursive::Cursive| {
+                alert(s, "from JavaScript".to_string(), message);
+            }))?;
+
+        // TODO (enhancement): do this synchronoulsly & error handling
+        Ok(())
+    }
+}
+
 pub struct PageView {
+    // on document shown in the page
     window: Option<Rc<RefCell<Window>>>,
     document: Option<Node>,
 
+    // on UI
     view: ElementContainer,
+
+    // on rendering
     js_runtime: JavaScriptRuntime,
 }
 
 impl PageView {
-    pub fn new(ui_cb_sink: Rc<RefCell<CbSink>>) -> Self {
+    pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
         (Self {
             window: None,
             document: None,
+
             view: LinearLayout::vertical(),
+
             js_runtime: JavaScriptRuntime::new(),
         })
-        .with(|w| {
-            w.js_runtime.set_ui_cb_sink(ui_cb_sink);
+        .with(|v| {
+            v.js_runtime
+                .set_pv_api_handler(PageViewAPIHandler::new(ui_cb_sink));
         })
     }
 

@@ -1,5 +1,4 @@
-use crate::{javascript::binding, window::Window};
-use cursive::CbSink;
+use crate::{javascript::binding, tui::views::PageViewAPIHandler, window::Window};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
@@ -9,7 +8,7 @@ pub struct JavaScriptRuntimeState {
 
     // TODO (enhancement): remove this by GothamState like Deno does.
     pub window: Option<Rc<RefCell<Window>>>,
-    pub ui_cb_sink: Option<Rc<RefCell<CbSink>>>,
+    pub pv_api_handler: Option<Rc<PageViewAPIHandler>>,
 }
 
 #[derive(Debug)]
@@ -46,7 +45,7 @@ impl JavaScriptRuntime {
         isolate.set_slot(Rc::new(RefCell::new(JavaScriptRuntimeState {
             context: context,
             window: None,
-            ui_cb_sink: None,
+            pv_api_handler: None,
         })));
 
         JavaScriptRuntime {
@@ -90,18 +89,18 @@ impl JavaScriptRuntime {
         self.get_state().borrow_mut().window = Some(window);
     }
 
-    pub fn ui_cb_sink(isolate: &v8::Isolate) -> Option<Rc<RefCell<CbSink>>> {
+    pub fn view_page_api_handler(isolate: &v8::Isolate) -> Option<Rc<PageViewAPIHandler>> {
         let state = Self::state(isolate);
         let state = state.borrow();
-        state.ui_cb_sink.clone()
+        state.pv_api_handler.clone()
     }
 
-    pub fn get_ui_cb_sink(&mut self) -> Option<Rc<RefCell<CbSink>>> {
-        Self::ui_cb_sink(&self.v8_isolate)
+    pub fn get_pv_api_handler(&mut self) -> Option<Rc<PageViewAPIHandler>> {
+        Self::view_page_api_handler(&self.v8_isolate)
     }
 
-    pub fn set_ui_cb_sink(&mut self, ui_cb_sink: Rc<RefCell<CbSink>>) {
-        self.get_state().borrow_mut().ui_cb_sink = Some(ui_cb_sink);
+    pub fn set_pv_api_handler(&mut self, view_api_handler: PageViewAPIHandler) {
+        self.get_state().borrow_mut().pv_api_handler = Some(Rc::new(view_api_handler));
     }
 
     pub fn execute(

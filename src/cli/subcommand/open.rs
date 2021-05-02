@@ -1,4 +1,4 @@
-use std::{cell::RefCell, env, rc::Rc};
+use std::{env, rc::Rc};
 
 use crate::{
     cli::CommonOpts,
@@ -29,7 +29,7 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     }
 
     // prepare a window
-    let mut b = views::BrowserView::named(Rc::new(RefCell::new(siv.cb_sink().clone())));
+    let mut b = views::BrowserView::named(Rc::new(siv.cb_sink().clone()));
     if b.get_mut().navigate_to(start_url).is_err() {
         return 1;
     };
