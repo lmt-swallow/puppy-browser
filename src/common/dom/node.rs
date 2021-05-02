@@ -13,7 +13,6 @@ pub enum NodeType {
     Document(super::document::Document),
 }
 
-#[allow(dead_code)]
 impl Node {
     pub fn append_child(&mut self, n: Node) -> &Node {
         self.child_nodes.push(n);
@@ -56,6 +55,33 @@ impl Node {
             }
             _ => {
                 panic!("failed to extract documentElement");
+            }
+        }
+    }
+
+    pub fn get_inline_scripts_recursively(&self) -> Vec<String> {
+        match self.node_type {
+            NodeType::Document(ref _document) => self
+                .child_nodes
+                .iter()
+                .map(|node| node.get_inline_scripts_recursively())
+                .collect::<Vec<Vec<String>>>()
+                .into_iter()
+                .flatten()
+                .collect(),
+            NodeType::Element(ref element) => match element.tag_name.as_str() {
+                "script" => vec![self.inner_text()],
+                _ => self
+                    .child_nodes
+                    .iter()
+                    .map(|node| node.get_inline_scripts_recursively())
+                    .collect::<Vec<Vec<String>>>()
+                    .into_iter()
+                    .flatten()
+                    .collect(),
+            },
+            _ => {
+                vec![]
             }
         }
     }

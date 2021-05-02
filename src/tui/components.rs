@@ -3,10 +3,6 @@ pub mod alert;
 pub use self::alert::*;
 
 #[allow(dead_code)]
-pub mod line;
-pub use self::line::*;
-
-#[allow(dead_code)]
 pub mod link;
 pub use self::link::*;
 
