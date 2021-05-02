@@ -10,16 +10,7 @@ use cursive::{event::Callback, impl_enabled, Rect};
 use unicode_width::UnicodeWidthStr;
 
 /// Simple text label with a callback when <Enter> is pressed.
-///
 /// A link shows its content in a single line and has a fixed size.
-///
-/// # Examples
-///
-/// ```rust
-/// use puppy::tui::components::link::Link;
-/// let page_link = Link::new("Quit", |s| s.quit());
-/// ```
-
 pub struct Link {
     label: String,
     callback: Callback,
@@ -48,9 +39,6 @@ impl Link {
         }
     }
 
-    /// Sets the function to be called when the link is pressed.
-    ///
-    /// Replaces the previous callback.
     pub fn set_callback<F>(&mut self, cb: F)
     where
         F: Fn(&mut Cursive) + 'static,
@@ -58,32 +46,10 @@ impl Link {
         self.callback = Callback::from_fn(cb);
     }
 
-    /// Returns the label for this link.
-    ///
-    /// Includes brackets.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use puppy::tui::components::link::Link;
-    /// let link = Link::new("Here", |s| s.quit());
-    /// assert_eq!(link.label(), "Here");
-    /// ```
     pub fn label(&self) -> &str {
         &self.label
     }
 
-    /// Sets the label to the given value.
-    ///
-    /// This will include brackets.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use puppy::tui::components::link::Link;
-    /// let mut link = Link::new("Quit", |s| s.quit());
-    /// link.set_label("Escape");
-    /// ```
     pub fn set_label<S>(&mut self, label: S)
     where
         S: Into<String>,
