@@ -1,10 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::components::{Link, TextInputView};
 use crate::{
     dom::{Node, NodeType},
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
-    tui::{browser_view::with_current_browser_view, traits::Clearable, BrowserView},
+    tui::{
+        components::{Link, TextInputView},
+        traits::Clearable,
+        views::{with_current_browser_view, BrowserView},
+    },
     window::Window,
 };
 use cursive::{

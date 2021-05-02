@@ -1,5 +1,4 @@
-use std::{error::Error, rc::Rc};
-
+use crate::tui::components::TextInputView;
 use cursive::{
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
@@ -7,19 +6,18 @@ use cursive::{
     Cursive, With,
 };
 use log::error;
-
-use super::components::TextInputView;
+use std::{error::Error, rc::Rc};
 
 pub static NAVIGATION_INPUT_NAME: &str = "navbar-input";
 pub static NAVIGATION_BUTTON_NAME: &str = "navbar-button";
 
-pub struct NavigationBar {
+pub struct NavigationView {
     view: LinearLayout,
 }
 
-impl NavigationBar {
-    pub fn new(default_value: String) -> NavigationBar {
-        NavigationBar {
+impl NavigationView {
+    pub fn new(default_value: String) -> NavigationView {
+        NavigationView {
             view: LinearLayout::vertical().child(
                 ResizedView::with_full_width(
                     LinearLayout::horizontal()
@@ -112,7 +110,7 @@ impl NavigationBar {
     }
 }
 
-impl ViewWrapper for NavigationBar {
+impl ViewWrapper for NavigationView {
     type V = LinearLayout;
 
     fn with_view<F, R>(&self, f: F) -> ::std::option::Option<R>

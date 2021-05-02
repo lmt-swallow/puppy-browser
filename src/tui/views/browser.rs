@@ -12,8 +12,9 @@ use crate::{
     html, url,
 };
 
-use super::{navigation::NavigationBar, page_view::PageView};
 use crate::tui::traits::clearable::Clearable;
+
+use super::{NavigationView, PageView};
 
 pub static BROWSER_VIEW_NAME: &str = "browser-view";
 pub static NAVBAR_VIEW_NAME: &str = "browser-view-navbar";
@@ -28,7 +29,7 @@ impl BrowserView {
         (BrowserView {
             view: LinearLayout::vertical()
                 .child(
-                    NavigationBar::new("".to_string())
+                    NavigationView::new("".to_string())
                         .on_navigation(|s, to| {
                             if with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to))
                                 .is_none()
@@ -56,7 +57,7 @@ impl BrowserView {
 
     pub fn current_url(&mut self) -> Result<String, Box<dyn Error>> {
         self.view
-            .call_on_name(NAVBAR_VIEW_NAME, |view: &mut NavigationBar| view.get_url())
+            .call_on_name(NAVBAR_VIEW_NAME, |view: &mut NavigationView| view.get_url())
             .ok_or("failed to find navbar")?
     }
 
@@ -76,7 +77,7 @@ impl BrowserView {
 
     pub fn navigate_to(&mut self, absolute_url: String) -> Result<(), Box<dyn Error>> {
         self.view
-            .call_on_name(NAVBAR_VIEW_NAME, |view: &mut NavigationBar| {
+            .call_on_name(NAVBAR_VIEW_NAME, |view: &mut NavigationView| {
                 view.set_url(absolute_url.clone())
             })
             .ok_or(format!(
