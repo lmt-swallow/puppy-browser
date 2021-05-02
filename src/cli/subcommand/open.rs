@@ -1,13 +1,11 @@
-use std::env;
+use std::{env, rc::Rc};
 
 use crate::{
     cli::CommonOpts,
-    tui::{self, BrowserView},
+    tui::{logger, views},
     util,
 };
-use cursive::logger;
 
-use log::set_max_level;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -23,16 +21,15 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
 
     // set up base
     let mut siv = cursive::default();
-    tui::menu::init_menu(&mut siv);
+    views::init_menu(&mut siv);
 
     // set up logger
-    logger::init();
     if let Some(level) = common_opts.verbose.log_level() {
-        set_max_level(level.to_level_filter());
+        logger::setup_logger(level);
     }
 
     // prepare a window
-    let mut b = BrowserView::named();
+    let mut b = views::BrowserView::named(Rc::new(siv.cb_sink().clone()));
     if b.get_mut().navigate_to(start_url).is_err() {
         return 1;
     };

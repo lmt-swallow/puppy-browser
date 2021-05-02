@@ -1,9 +1,9 @@
-use log::trace;
+use log::{error, trace};
 use rusty_v8 as v8;
 
 use crate::javascript::JavaScriptRuntime;
 
-use super::{create_object_under, set_property};
+use super::{create_object_under, set_function_to, set_property};
 
 pub fn initialize_window<'s>(
     scope: &mut v8::ContextScope<'s, v8::EscapableHandleScope>,
@@ -11,6 +11,33 @@ pub fn initialize_window<'s>(
 ) -> v8::Local<'s, v8::Object> {
     let window = create_object_under(scope, global, "window");
 
+    // `alert` property
+    set_function_to(
+        scope,
+        window,
+        "alert",
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut _retval: v8::ReturnValue| {
+            let message = args
+                .get(0)
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
+            trace!("alert called with: {}", message);
+
+            let pv_api_handler = JavaScriptRuntime::view_page_api_handler(scope).unwrap();
+            // let pv_api_handler = pv_api_handler.();
+            match pv_api_handler.alert(message) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("failed to request alert(); {}", e);
+                }
+            };
+        },
+    );
+
+    // `name` property
     set_property(
         scope,
         window,
@@ -21,10 +48,7 @@ pub fn initialize_window<'s>(
          mut rv: v8::ReturnValue| {
             trace!("Read access to: {}", key.to_rust_string_lossy(scope));
 
-            let state = JavaScriptRuntime::state(scope);
-            let state = state.borrow_mut();
-
-            let window = state.window.clone();
+            let window = JavaScriptRuntime::window(scope);
             let window = window.unwrap();
             let window = window.borrow_mut();
 
@@ -37,10 +61,7 @@ pub fn initialize_window<'s>(
          _args: v8::PropertyCallbackArguments| {
             trace!("Write access to: {}", key.to_rust_string_lossy(scope));
 
-            let state = JavaScriptRuntime::state(scope);
-            let state = state.borrow_mut();
-
-            let window = state.window.clone();
+            let window = JavaScriptRuntime::window(scope);
             let window = window.unwrap();
             let mut window = window.borrow_mut();
 

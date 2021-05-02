@@ -1,16 +1,19 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, error::Error, rc::Rc};
 
-use super::components::{Link, TextInputView};
 use crate::{
     dom::{Node, NodeType},
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
-    tui::{browser_view::with_current_browser_view, traits::Clearable, BrowserView},
+    tui::{
+        components::{alert, Link, TextInputView},
+        views::{with_current_browser_view, BrowserView},
+    },
     window::Window,
 };
 use cursive::{
     traits::Boxable,
     view::ViewWrapper,
     views::{Button, LinearLayout, TextView},
+    CbSink, With,
 };
 use log::{error, info};
 use thiserror::Error;
@@ -29,19 +32,13 @@ pub enum RenderError {
     #[error("failed to render; unsupported node type found")]
     UnsupportedNodeTypeError,
 
-    #[error("failed to render; javascript execution failed")]
+    #[error("failed to render; javascript execution failed: {0:?}")]
     JavaScriptError(JavaScriptRuntimeError),
 }
 
 type ElementContainer = LinearLayout;
 
-impl Clearable for ElementContainer {
-    fn clear(&mut self) {
-        for _ in 0..self.len() {
-            self.remove_child(0);
-        }
-    }
-}
+// TODO: move those implemntations to somewhere else
 
 fn render_nodes(
     view: &mut ElementContainer,
@@ -79,13 +76,15 @@ fn render_node(
                     .unwrap_or(&"".to_string())
                     .to_string();
                 view.add_child(Link::new(node.inner_text(), move |s| {
-                    if with_current_browser_view(s, |b: &mut BrowserView| {
+                    let result = with_current_browser_view(s, |b: &mut BrowserView| {
                         b.resolve_url(link_href.clone())
                             .and_then(|url| b.navigate_to(url))
-                    })
-                    .is_none()
-                    {
+                    });
+                    if result.is_none() {
                         error!("failed to initiate navigation by link")
+                    }
+                    if let Err(e) = result.unwrap() {
+                        error!("failed to navigate; {}", e)
                     }
                 }));
                 Ok(())
@@ -106,9 +105,35 @@ fn render_node(
                     Ok(())
                 }
                 "button" | "submit" => {
+                    let onclick = element
+                        .attributes
+                        .get("onclick")
+                        .unwrap_or(&"".to_string())
+                        .clone();
+
                     view.add_child(Button::new(
                         element.attributes.get("value").unwrap_or(&"".to_string()),
-                        |_s| {},
+                        move |s| {
+                            let result = with_current_browser_view(s, |b: &mut BrowserView| {
+                                b.with_page_view_mut(|p| {
+                                    p.js_runtime.execute("(inline)", onclick.as_str())
+                                })
+                            });
+                            if result.is_none() {
+                                error!("failed to run onclick event of button")
+                            }
+                            match result.unwrap().unwrap() {
+                                Ok(message) => {
+                                    info!("succeeded to run javascript; {}", message);
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "failed to run javascript; {}",
+                                        RenderError::JavaScriptError(e)
+                                    );
+                                }
+                            }
+                        },
                     ));
                     Ok(())
                 }
@@ -144,22 +169,54 @@ fn render_node(
     }
 }
 
+pub struct PageViewAPIHandler {
+    ui_cb_sink: Rc<CbSink>,
+}
+
+impl PageViewAPIHandler {
+    pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
+        Self {
+            ui_cb_sink: ui_cb_sink,
+        }
+    }
+
+    pub fn alert(&self, message: String) -> Result<(), Box<dyn Error>> {
+        self.ui_cb_sink
+            .send(Box::new(move |s: &mut cursive::Cursive| {
+                alert(s, "from JavaScript".to_string(), message);
+            }))?;
+
+        // TODO (enhancement): do this synchronoulsly & error handling
+        Ok(())
+    }
+}
+
 pub struct PageView {
+    // on document shown in the page
     window: Option<Rc<RefCell<Window>>>,
     document: Option<Node>,
 
+    // on UI
     view: ElementContainer,
+
+    // on rendering
     js_runtime: JavaScriptRuntime,
 }
 
 impl PageView {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
+        (Self {
             window: None,
             document: None,
+
             view: LinearLayout::vertical(),
+
             js_runtime: JavaScriptRuntime::new(),
-        }
+        })
+        .with(|v| {
+            v.js_runtime
+                .set_pv_api_handler(PageViewAPIHandler::new(ui_cb_sink));
+        })
     }
 
     /// This function prepares a new page with given document.
@@ -232,11 +289,5 @@ impl ViewWrapper for PageView {
         Self::V: ::std::marker::Sized,
     {
         Ok(self.view)
-    }
-}
-
-impl Clearable for PageView {
-    fn clear(&mut self) {
-        self.view.clear()
     }
 }
