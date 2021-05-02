@@ -1,9 +1,11 @@
 use std::env;
 
-use crate::{cli::CommonOpts, tui::views, util};
-use cursive::logger;
+use crate::{
+    cli::CommonOpts,
+    tui::{logger, views},
+    util,
+};
 
-use log::set_max_level;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -22,9 +24,8 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     views::init_menu(&mut siv);
 
     // set up logger
-    logger::init();
     if let Some(level) = common_opts.verbose.log_level() {
-        set_max_level(level.to_level_filter());
+        logger::setup_logger(level);
     }
 
     // prepare a window

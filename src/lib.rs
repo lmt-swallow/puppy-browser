@@ -4,5 +4,5 @@ mod javascript;
 mod tui;
 mod util;
 
-mod primitive;
-use self::primitive::*;
+mod common;
+use self::common::*;
