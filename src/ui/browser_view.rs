@@ -1,6 +1,3 @@
-use std::error::Error;
-
-use super::traits::Clearable;
 use cursive::{
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
@@ -8,15 +5,15 @@ use cursive::{
     Cursive,
 };
 use log::error;
+use std::error::Error;
 
 use crate::{
     fetch::{fetch, Request},
-    html,
-    ui::components::PageView,
-    url,
+    html, url,
 };
 
-use super::components::NavigationBar;
+use super::{navigation::NavigationBar, page_view::PageView};
+use crate::ui::traits::clearable::Clearable;
 
 pub static BROWSER_VIEW_NAME: &str = "browser-view";
 pub static NAVBAR_VIEW_NAME: &str = "browser-view-navbar";

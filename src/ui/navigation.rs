@@ -8,7 +8,7 @@ use cursive::{
 };
 use log::error;
 
-use super::TextInputView;
+use super::components::TextInputView;
 
 pub static NAVIGATION_INPUT_NAME: &str = "navbar-input";
 pub static NAVIGATION_BUTTON_NAME: &str = "navbar-button";

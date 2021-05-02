@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::super::components::{Link, TextInputView};
+use super::components::{Link, TextInputView};
 use crate::{
     dom::{Node, NodeType},
     js::{JavaScriptRuntime, JavaScriptRuntimeError},
@@ -14,16 +14,6 @@ use cursive::{
 };
 use log::{error, info};
 use thiserror::Error;
-
-type ElementContainer = LinearLayout;
-
-impl Clearable for ElementContainer {
-    fn clear(&mut self) {
-        for _ in 0..self.len() {
-            self.remove_child(0);
-        }
-    }
-}
 
 #[derive(Error, Debug, PartialEq)]
 pub enum RenderError {
@@ -41,6 +31,16 @@ pub enum RenderError {
 
     #[error("failed to render; javascript execution failed")]
     JavaScriptError(JavaScriptRuntimeError),
+}
+
+type ElementContainer = LinearLayout;
+
+impl Clearable for ElementContainer {
+    fn clear(&mut self) {
+        for _ in 0..self.len() {
+            self.remove_child(0);
+        }
+    }
 }
 
 fn render_nodes(
@@ -186,7 +186,7 @@ impl PageView {
     }
 
     /// This function renders `self.document` to `self.view`.
-    /// 
+    ///
     /// TODO (enhancement): layout boxes and construct "layout tree" before rendering
     fn render_document(&mut self) -> Result<(), RenderError> {
         // assert self.document is set
