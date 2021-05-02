@@ -101,7 +101,7 @@ impl BrowserView {
 
         self.view
             .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
-                view.render_document(document)
+                view.init_page(document)
             })
             .ok_or(format!(
                 "failed to render {}; no element container found",

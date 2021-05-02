@@ -1,4 +1,5 @@
 mod console;
+mod window;
 use rusty_v8 as v8;
 
 /// `initialize_context` takes a HandleScope to `v8::Isolate` object and returns a new HandleScope to newly created `v8::Context`.
@@ -17,6 +18,10 @@ pub fn initialize_context<'s>(
     let scope = &mut v8::ContextScope::new(scope, context);
     console::initialize_console(scope, global);
 
+    // bind `window` object
+    let scope = &mut v8::ContextScope::new(scope, context);
+    window::initialize_window(scope, global);
+
     // return with a handle to newly created v8::Context
     scope.escape(context)
 }
@@ -24,7 +29,7 @@ pub fn initialize_context<'s>(
 pub fn create_object_under<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
-    name: &'static str
+    name: &'static str,
 ) -> v8::Local<'s, v8::Object> {
     let template = v8::ObjectTemplate::new(scope);
     let key = v8::String::new(scope, name).unwrap();

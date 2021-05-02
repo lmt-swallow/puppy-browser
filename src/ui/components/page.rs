@@ -3,10 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use super::super::components::{Link, TextInputView};
 use crate::{
     dom::{Node, NodeType},
-    js::{
-        binding::{create_object_under, set_property},
-        JavaScriptRuntime, JavaScriptRuntimeError,
-    },
+    js::{JavaScriptRuntime, JavaScriptRuntimeError},
     ui::{browser_view::with_current_browser_view, traits::Clearable, BrowserView},
     window::Window,
 };
@@ -15,8 +12,7 @@ use cursive::{
     view::ViewWrapper,
     views::{Button, LinearLayout, TextView},
 };
-use log::{error, info, trace};
-use rusty_v8 as v8;
+use log::{error, info};
 use thiserror::Error;
 
 type ElementContainer = LinearLayout;
@@ -33,6 +29,9 @@ impl Clearable for ElementContainer {
 pub enum RenderError {
     #[error("failed to render")]
     UnknownError,
+
+    #[error("failed to render; no document exists")]
+    NoDocumentError,
 
     #[error("failed to render; unsupported input type {specified_type:?} found")]
     UnsupportedInputTypeError { specified_type: String },
@@ -146,7 +145,8 @@ fn render_node(
 }
 
 pub struct PageView {
-    window: Rc<RefCell<Window>>,
+    window: Option<Rc<RefCell<Window>>>,
+    document: Option<Node>,
 
     view: ElementContainer,
     js_runtime: JavaScriptRuntime,
@@ -154,92 +154,59 @@ pub struct PageView {
 
 impl PageView {
     pub fn new() -> Self {
+        Self {
+            window: None,
+            document: None,
+            view: LinearLayout::vertical(),
+            js_runtime: JavaScriptRuntime::new(),
+        }
+    }
+
+    /// This function prepares a new page with given document.
+    pub fn init_page(&mut self, document: Node) -> Result<(), RenderError> {
+        // assert the argument is Document.
+        match document.node_type {
+            NodeType::Document(ref _document) => {}
+            _ => return Err(RenderError::NoDocumentError),
+        };
+
+        // prepare `Window` object for the new page
         let window = Rc::new(RefCell::new(Window {
             name: "".to_string(),
-            document: None,
         }));
 
-        let mut js_runtime = JavaScriptRuntime::new();
-        js_runtime.set_window(window.clone());
+        // set basic props of this page
+        self.window = Some(window.clone());
+        self.document = Some(document);
 
-        let mut p = PageView {
-            window: window,
-            view: LinearLayout::vertical(),
-            js_runtime,
+        // set reference to Window object of this page for JavaScript runtime
+        self.js_runtime.set_window(window.clone());
+
+        self.render_document()
+    }
+
+    /// This function renders `self.document` to `self.view`.
+    /// 
+    /// TODO (enhancement): layout boxes and construct "layout tree" before rendering
+    fn render_document(&mut self) -> Result<(), RenderError> {
+        // assert self.document is set
+        let document = match &self.document {
+            Some(w) => w,
+            None => return Err(RenderError::NoDocumentError),
         };
-        p.init_context();
-        p
-    }
 
-    pub fn init_context(&mut self) {
-        // TODO (enhancement): wrap v8-related process into `js` crate
-        let mut scope = self.js_runtime.get_handle_scope();
-        let context = scope.get_current_context();
-
-        let global = context.global(&mut scope);
-
-        // register `window` object
-        let window = create_object_under(&mut scope, global, "window");
-        set_property(
-            &mut scope,
-            window,
-            "name",
-            |scope: &mut v8::HandleScope,
-             key: v8::Local<v8::Name>,
-             _args: v8::PropertyCallbackArguments,
-             mut rv: v8::ReturnValue| {
-                trace!("Read access to: {}", key.to_rust_string_lossy(scope));
-
-                let state = JavaScriptRuntime::state(scope);
-                let state = state.borrow_mut();
-
-                let window = state.window.clone();
-                let window = window.unwrap();
-                let window = window.borrow_mut();
-
-                let value = window.name.as_str();
-                rv.set(v8::String::new(scope, value).unwrap().into());
-            },
-            |scope: &mut v8::HandleScope,
-             key: v8::Local<v8::Name>,
-             value: v8::Local<v8::Value>,
-             _args: v8::PropertyCallbackArguments| {
-                trace!("Write access to: {}", key.to_rust_string_lossy(scope));
-
-                let state = JavaScriptRuntime::state(scope);
-                let state = state.borrow_mut();
-
-                let window = state.window.clone();
-                let window = window.unwrap();
-                let mut window = window.borrow_mut();
-
-                let value = value.to_rust_string_lossy(scope);
-                window.name = value;
-            },
-        );
-
-        // register `document` object
-        // TODO
-    }
-
-    pub fn render_document(&mut self, node: Node) -> Result<(), RenderError> {
-        let top_element = match node.node_type {
+        // render DOM recursively
+        match document.node_type {
             NodeType::Document(ref _document) => {
-                assert_eq!(node.child_nodes.len(), 1);
-                node.child_nodes.get(0)
+                assert_eq!(document.child_nodes.len(), 1);
+                if let Some(top_element) = document.child_nodes.get(0) {
+                    render_node(&mut self.view, top_element, &mut self.js_runtime)
+                } else {
+                    Ok(())
+                }
             }
-            _ => None,
-        };
-        let result = if let Some(_top_element) = top_element {
-            render_node(&mut self.view, _top_element, &mut self.js_runtime)
-        } else {
-            Ok(())
-        };
-
-        let mut window = self.window.borrow_mut();
-        window.document = Some(node);
-
-        result
+            _ => Err(RenderError::UnknownError),
+        }
     }
 }
 
