@@ -13,6 +13,7 @@ pub enum NodeType {
     Document(super::document::Document),
 }
 
+#[allow(dead_code)]
 impl Node {
     pub fn append_child(&mut self, n: Node) -> &Node {
         self.child_nodes.push(n);

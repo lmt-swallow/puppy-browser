@@ -25,7 +25,7 @@ pub enum JavaScriptRuntimeError {
     ExecuteError { message: String },
 }
 
-/// TODO (docs): write here
+#[allow(dead_code)]
 impl JavaScriptRuntime {
     pub fn new() -> Self {
         // init v8 platform just once
