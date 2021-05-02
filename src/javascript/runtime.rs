@@ -1,4 +1,6 @@
-use crate::{javascript::binding, tui::views::PageViewAPIHandler, window::Window};
+use crate::{
+    common::dom::Node, javascript::binding, tui::views::PageViewAPIHandler, window::Window,
+};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
@@ -8,6 +10,7 @@ pub struct JavaScriptRuntimeState {
 
     // TODO (enhancement): remove this by GothamState like Deno does.
     pub window: Option<Rc<RefCell<Window>>>,
+    pub document: Option<Rc<RefCell<Node>>>,
     pub pv_api_handler: Option<Rc<PageViewAPIHandler>>,
 }
 
@@ -36,7 +39,7 @@ impl JavaScriptRuntime {
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
         let context = {
             let scope = &mut v8::HandleScope::new(&mut isolate);
-            let context = binding::initialize_context(scope);
+            let context = binding::create_context_with(scope);
             v8::Global::new(scope, context)
         };
 
@@ -45,6 +48,7 @@ impl JavaScriptRuntime {
         isolate.set_slot(Rc::new(RefCell::new(JavaScriptRuntimeState {
             context: context,
             window: None,
+            document: None,
             pv_api_handler: None,
         })));
 
@@ -52,6 +56,9 @@ impl JavaScriptRuntime {
             v8_isolate: isolate,
         }
     }
+
+    // on state management
+    ////
 
     pub fn state(isolate: &v8::Isolate) -> Rc<RefCell<JavaScriptRuntimeState>> {
         let s = isolate
@@ -75,6 +82,9 @@ impl JavaScriptRuntime {
         state.context.clone()
     }
 
+    // on `Window` objects
+    ////
+
     pub fn window(isolate: &v8::Isolate) -> Option<Rc<RefCell<Window>>> {
         let state = Self::state(isolate);
         let state = state.borrow();
@@ -89,19 +99,42 @@ impl JavaScriptRuntime {
         self.get_state().borrow_mut().window = Some(window);
     }
 
-    pub fn view_page_api_handler(isolate: &v8::Isolate) -> Option<Rc<PageViewAPIHandler>> {
+    // on `PageView` API handlers
+    ////
+
+    pub fn pv_api_handler(isolate: &v8::Isolate) -> Option<Rc<PageViewAPIHandler>> {
         let state = Self::state(isolate);
         let state = state.borrow();
         state.pv_api_handler.clone()
     }
 
     pub fn get_pv_api_handler(&mut self) -> Option<Rc<PageViewAPIHandler>> {
-        Self::view_page_api_handler(&self.v8_isolate)
+        Self::pv_api_handler(&self.v8_isolate)
     }
 
     pub fn set_pv_api_handler(&mut self, view_api_handler: PageViewAPIHandler) {
         self.get_state().borrow_mut().pv_api_handler = Some(Rc::new(view_api_handler));
     }
+
+    // on `Document` object
+    ////
+
+    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Node>>> {
+        let state = Self::state(isolate);
+        let state = state.borrow();
+        state.document.clone()
+    }
+
+    pub fn get_document(&mut self) -> Option<Rc<RefCell<Node>>> {
+        Self::document(&self.v8_isolate)
+    }
+
+    pub fn set_document(&mut self, node: Rc<RefCell<Node>>) {
+        self.get_state().borrow_mut().document = Some(node);
+    }
+
+    // on script execution
+    ////
 
     pub fn execute(
         &mut self,

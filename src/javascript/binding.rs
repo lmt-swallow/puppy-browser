@@ -1,9 +1,10 @@
 mod console;
+mod document;
 mod window;
 use rusty_v8 as v8;
 
 /// `initialize_context` takes a HandleScope to `v8::Isolate` object and returns a new HandleScope to newly created `v8::Context`.
-pub fn initialize_context<'s>(
+pub fn create_context_with<'s>(
     isolate_scope: &mut v8::HandleScope<'s, ()>,
 ) -> v8::Local<'s, v8::Context> {
     let scope = &mut v8::EscapableHandleScope::new(isolate_scope);
@@ -21,6 +22,10 @@ pub fn initialize_context<'s>(
     // bind `window` object
     let scope = &mut v8::ContextScope::new(scope, context);
     window::initialize_window(scope, global);
+
+    // bind `document` object
+    let scope = &mut v8::ContextScope::new(scope, context);
+    document::initialize_document(scope, global);
 
     // return with a handle to newly created v8::Context
     scope.escape(context)

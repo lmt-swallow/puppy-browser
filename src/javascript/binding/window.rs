@@ -26,8 +26,7 @@ pub fn initialize_window<'s>(
                 .to_rust_string_lossy(scope);
             trace!("alert called with: {}", message);
 
-            let pv_api_handler = JavaScriptRuntime::view_page_api_handler(scope).unwrap();
-            // let pv_api_handler = pv_api_handler.();
+            let pv_api_handler = JavaScriptRuntime::pv_api_handler(scope).unwrap();
             match pv_api_handler.alert(message) {
                 Ok(_) => {}
                 Err(e) => {

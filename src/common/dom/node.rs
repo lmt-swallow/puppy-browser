@@ -35,6 +35,30 @@ impl Node {
             .collect::<Vec<_>>()
             .join("")
     }
+
+    pub fn document_element(&self) -> &Self {
+        match self.node_type {
+            NodeType::Document(ref _document) => {
+                assert_eq!(self.child_nodes.len(), 1);
+                self.child_nodes.get(0).unwrap()
+            }
+            _ => {
+                panic!("failed to extract documentElement");
+            }
+        }
+    }
+
+    pub fn document_element_mut(&mut self) -> &mut Node {
+        match self.node_type {
+            NodeType::Document(ref _document) => {
+                assert_eq!(self.child_nodes.len(), 1);
+                self.child_nodes.get_mut(0).unwrap()
+            }
+            _ => {
+                panic!("failed to extract documentElement");
+            }
+        }
+    }
 }
 
 #[cfg(test)]

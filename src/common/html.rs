@@ -47,7 +47,7 @@ pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
     let nodes = nodes().parse(&body as &str);
     match nodes {
         Ok((nodes, _)) => {
-            let child_nodes = if nodes.len() == 1 {
+            let document_element_arr = if nodes.len() == 1 {
                 nodes
             } else {
                 vec![Element::new("html".to_string(), AttrMap::new(), nodes)]
@@ -55,7 +55,7 @@ pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
             match Document::new(
                 response.url.to_string(),
                 response.url.to_string(),
-                child_nodes,
+                document_element_arr,
             ) {
                 Ok(document_node) => Ok(document_node),
                 Err(e) => Err(HTMLParseError::InvalidDocumentError(e)),

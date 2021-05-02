@@ -16,7 +16,7 @@ impl Document {
         document_uri: String,
         child_nodes: Vec<Node>,
     ) -> Result<Node, DOMException> {
-        if child_nodes.len() >= 2 {
+        if child_nodes.len() != 1 {
             Err(DOMException::InvalidDocumentElement)
         } else {
             Ok(Node {
@@ -55,15 +55,16 @@ mod tests {
     #[test]
     fn test_invalid_new() {
         let url = "http://example.com";
-        if let Ok(_) = Document::new(
+        assert!(Document::new(
             url.to_string(),
             url.to_string(),
             vec![
                 Element::new("p".to_string(), AttrMap::new(), vec![]),
                 Element::new("p".to_string(), AttrMap::new(), vec![]),
             ],
-        ) {
-            assert!(false)
-        }
+        )
+        .is_err());
+
+        assert!(Document::new(url.to_string(), url.to_string(), vec![],).is_err());
     }
 }
