@@ -2,7 +2,7 @@ use std::env;
 
 use crate::{
     cli::CommonOpts,
-    ui::{self, BrowserView},
+    tui::{self, BrowserView},
     util,
 };
 use cursive::logger;
@@ -23,7 +23,7 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
 
     // set up base
     let mut siv = cursive::default();
-    ui::menu::init_menu(&mut siv);
+    tui::menu::init_menu(&mut siv);
 
     // set up logger
     logger::init();

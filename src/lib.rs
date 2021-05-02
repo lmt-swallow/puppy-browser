@@ -1,9 +1,8 @@
 pub mod cli;
-pub mod dom;
-pub mod fetch;
-pub mod html;
-pub mod js;
-pub mod ui;
-pub mod url;
-pub mod util;
-pub mod window;
+
+mod javascript;
+mod tui;
+mod util;
+
+mod primitive;
+use self::primitive::*;

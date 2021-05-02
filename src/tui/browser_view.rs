@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{navigation::NavigationBar, page_view::PageView};
-use crate::ui::traits::clearable::Clearable;
+use crate::tui::traits::clearable::Clearable;
 
 pub static BROWSER_VIEW_NAME: &str = "browser-view";
 pub static NAVBAR_VIEW_NAME: &str = "browser-view-navbar";

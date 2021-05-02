@@ -1,7 +1,7 @@
 use log::trace;
 use rusty_v8 as v8;
 
-use crate::js::JavaScriptRuntime;
+use crate::javascript::JavaScriptRuntime;
 
 use super::{create_object_under, set_property};
 

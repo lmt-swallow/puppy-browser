@@ -1,4 +1,4 @@
-use crate::{js::binding, window::Window};
+use crate::{javascript::binding, window::Window};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;

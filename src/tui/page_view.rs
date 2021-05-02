@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use super::components::{Link, TextInputView};
 use crate::{
     dom::{Node, NodeType},
-    js::{JavaScriptRuntime, JavaScriptRuntimeError},
-    ui::{browser_view::with_current_browser_view, traits::Clearable, BrowserView},
+    javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
+    tui::{browser_view::with_current_browser_view, traits::Clearable, BrowserView},
     window::Window,
 };
 use cursive::{

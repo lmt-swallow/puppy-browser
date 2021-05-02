@@ -1,3 +1,3 @@
 pub mod completion;
-pub mod js;
+pub mod javascript;
 pub mod open;

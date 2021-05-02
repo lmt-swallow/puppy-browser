@@ -1,6 +1,6 @@
 use crate::{
     cli::{logger, CommonOpts},
-    js::JavaScriptRuntime,
+    javascript::JavaScriptRuntime,
 };
 use std::io::{self, Write};
 
