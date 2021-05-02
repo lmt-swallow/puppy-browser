@@ -60,7 +60,7 @@ impl JavaScriptRuntime {
     }
 
     pub fn get_state(&self) -> Rc<RefCell<JavaScriptRuntimeState>> {
-        JavaScriptRuntime::state(&self.v8_isolate)
+        Self::state(&self.v8_isolate)
     }
 
     pub fn get_handle_scope(&mut self) -> v8::HandleScope {
@@ -74,10 +74,14 @@ impl JavaScriptRuntime {
         state.context.clone()
     }
 
-    pub fn get_window(&mut self) -> Option<Rc<RefCell<Window>>> {
-        let state = self.get_state();
+    pub fn window(isolate: &v8::Isolate) -> Option<Rc<RefCell<Window>>> {
+        let state = Self::state(isolate);
         let state = state.borrow();
         state.window.clone()
+    }
+
+    pub fn get_window(&mut self) -> Option<Rc<RefCell<Window>>> {
+        Self::window(&self.v8_isolate)
     }
 
     pub fn set_window(&mut self, window: Rc<RefCell<Window>>) {

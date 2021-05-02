@@ -5,7 +5,6 @@ use crate::{
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
     tui::{
         components::{Link, TextInputView},
-        traits::Clearable,
         views::{with_current_browser_view, BrowserView},
     },
     window::Window,
@@ -32,19 +31,13 @@ pub enum RenderError {
     #[error("failed to render; unsupported node type found")]
     UnsupportedNodeTypeError,
 
-    #[error("failed to render; javascript execution failed")]
+    #[error("failed to render; javascript execution failed: {0:?}")]
     JavaScriptError(JavaScriptRuntimeError),
 }
 
 type ElementContainer = LinearLayout;
 
-impl Clearable for ElementContainer {
-    fn clear(&mut self) {
-        for _ in 0..self.len() {
-            self.remove_child(0);
-        }
-    }
-}
+// TODO: move those implemntations to somewhere else
 
 fn render_nodes(
     view: &mut ElementContainer,
@@ -82,13 +75,15 @@ fn render_node(
                     .unwrap_or(&"".to_string())
                     .to_string();
                 view.add_child(Link::new(node.inner_text(), move |s| {
-                    if with_current_browser_view(s, |b: &mut BrowserView| {
+                    let result = with_current_browser_view(s, |b: &mut BrowserView| {
                         b.resolve_url(link_href.clone())
                             .and_then(|url| b.navigate_to(url))
-                    })
-                    .is_none()
-                    {
+                    });
+                    if result.is_none() {
                         error!("failed to initiate navigation by link")
+                    }
+                    if let Err(e) = result.unwrap() {
+                        error!("failed to navigate; {}", e)
                     }
                 }));
                 Ok(())
@@ -109,9 +104,35 @@ fn render_node(
                     Ok(())
                 }
                 "button" | "submit" => {
+                    let onclick = element
+                        .attributes
+                        .get("onclick")
+                        .unwrap_or(&"".to_string())
+                        .clone();
+
                     view.add_child(Button::new(
                         element.attributes.get("value").unwrap_or(&"".to_string()),
-                        |_s| {},
+                        move |s| {
+                            let result = with_current_browser_view(s, |b: &mut BrowserView| {
+                                b.with_page_view_mut(|p| {
+                                    p.js_runtime.execute("(inline)", onclick.as_str())
+                                })
+                            });
+                            if result.is_none() {
+                                error!("failed to run onclick event of button")
+                            }
+                            match result.unwrap().unwrap() {
+                                Ok(message) => {
+                                    info!("succeeded to run javascript; {}", message);
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "failed to run javascript; {}",
+                                        RenderError::JavaScriptError(e)
+                                    );
+                                }
+                            }
+                        },
                     ));
                     Ok(())
                 }
@@ -235,11 +256,5 @@ impl ViewWrapper for PageView {
         Self::V: ::std::marker::Sized,
     {
         Ok(self.view)
-    }
-}
-
-impl Clearable for PageView {
-    fn clear(&mut self) {
-        self.view.clear()
     }
 }

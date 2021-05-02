@@ -2,7 +2,7 @@ use cursive::{
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
     views::{LinearLayout, NamedView, Panel, ScrollView},
-    Cursive,
+    Cursive, View,
 };
 use log::error;
 use std::error::Error;
@@ -12,47 +12,48 @@ use crate::{
     html, url,
 };
 
-use crate::tui::traits::clearable::Clearable;
-
 use super::{NavigationView, PageView};
 
 pub static BROWSER_VIEW_NAME: &str = "browser-view";
 pub static NAVBAR_VIEW_NAME: &str = "browser-view-navbar";
 pub static PAGE_VIEW_NAME: &str = "browser-view-page";
+pub static PAGE_VIEW_CONTAINER_NAME: &str = "browser-view-page-container";
 
 pub struct BrowserView {
     view: LinearLayout,
+}
+
+fn build_navigation_container() -> impl View {
+    NavigationView::new("".to_string()).on_navigation(|s, to| {
+        if with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to)).is_none() {
+            error!("failed to initiate navigation");
+        };
+    })
+}
+
+fn build_page_container() -> impl View {
+    Panel::new(
+        ScrollView::new(PageView::new().with_name(PAGE_VIEW_NAME).full_screen()).full_screen(),
+    )
+    .full_screen()
 }
 
 impl BrowserView {
     pub fn named() -> NamedView<Self> {
         (BrowserView {
             view: LinearLayout::vertical()
-                .child(
-                    NavigationView::new("".to_string())
-                        .on_navigation(|s, to| {
-                            if with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to))
-                                .is_none()
-                            {
-                                error!("failed to initiate navigation");
-                            };
-                        })
-                        .with_name(NAVBAR_VIEW_NAME),
-                )
-                .child(
-                    Panel::new(
-                        ScrollView::new(
-                            PageView::new()
-                                .with_name(PAGE_VIEW_NAME)
-                                .full_height()
-                                .full_screen(),
-                        )
-                        .full_screen(),
-                    )
-                    .full_screen(),
-                ),
+                .child(build_navigation_container().with_name(NAVBAR_VIEW_NAME))
+                .child(build_page_container()),
         })
         .with_name(BROWSER_VIEW_NAME)
+    }
+
+    pub fn with_page_view_mut<F, R>(&mut self, f: F) -> ::std::option::Option<R>
+    where
+        F: FnOnce(&mut PageView) -> R,
+    {
+        self.view
+            .call_on_name(PAGE_VIEW_NAME, |s: &mut PageView| f(s))
     }
 
     pub fn current_url(&mut self) -> Result<String, Box<dyn Error>> {
@@ -76,27 +77,31 @@ impl BrowserView {
     }
 
     pub fn navigate_to(&mut self, absolute_url: String) -> Result<(), Box<dyn Error>> {
+        // change navigation content
         self.view
             .call_on_name(NAVBAR_VIEW_NAME, |view: &mut NavigationView| {
                 view.set_url(absolute_url.clone())
             })
             .ok_or(format!(
-                "failed to clear the current view to render {}; no element container found",
+                "failed to navigate to {}; no element container found",
                 absolute_url
             ))?;
 
+        // remove PageView instance
+        self.view.remove_child(1).ok_or(format!(
+            "failed to navigate to {}; failed to find page container",
+            absolute_url
+        ))?;
+
+        // add a new PageView instance
         self.view
-            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
-                view.clear();
-            })
-            .ok_or(format!(
-                "failed to clear the current view to render {}; no element container found",
-                absolute_url
-            ))?;
+            .add_child(build_page_container().with_name(PAGE_VIEW_CONTAINER_NAME));
 
+        // fetch & parse document
         let response = fetch(Request::new(absolute_url.clone()))?;
         let document = html::parse(response)?;
 
+        // set the document to PageView
         self.view
             .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
                 view.init_page(document)
