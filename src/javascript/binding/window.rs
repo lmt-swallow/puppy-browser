@@ -1,7 +1,7 @@
-use log::trace;
+use log::{error, trace};
 use rusty_v8 as v8;
 
-use crate::javascript::JavaScriptRuntime;
+use crate::{javascript::JavaScriptRuntime, tui::components::alert};
 
 use super::{create_object_under, set_function_to, set_property};
 
@@ -26,7 +26,17 @@ pub fn initialize_window<'s>(
                 .to_rust_string_lossy(scope);
             trace!("alert called with: {}", message);
 
-            // TODO
+            let ui_cb_sink = JavaScriptRuntime::ui_cb_sink(scope);
+            let ui_cb_sink = ui_cb_sink.unwrap();
+            let ui_cb_sink = ui_cb_sink.borrow_mut();
+            match ui_cb_sink.send(Box::new(move |s: &mut cursive::Cursive| {
+                alert(s, "from JavaScript".to_string(), message);
+            })) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("failed to request alert(); {}", e);
+                }
+            };
         },
     );
 

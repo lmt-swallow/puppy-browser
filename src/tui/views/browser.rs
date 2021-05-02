@@ -2,10 +2,10 @@ use cursive::{
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
     views::{LinearLayout, NamedView, Panel, ScrollView},
-    Cursive, View,
+    CbSink, Cursive, View, With,
 };
 use log::error;
-use std::error::Error;
+use std::{cell::RefCell, error::Error, rc::Rc};
 
 use crate::{
     fetch::{fetch, Request},
@@ -21,31 +21,49 @@ pub static PAGE_VIEW_CONTAINER_NAME: &str = "browser-view-page-container";
 
 pub struct BrowserView {
     view: LinearLayout,
-}
-
-fn build_navigation_container() -> impl View {
-    NavigationView::new("".to_string()).on_navigation(|s, to| {
-        if with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to)).is_none() {
-            error!("failed to initiate navigation");
-        };
-    })
-}
-
-fn build_page_container() -> impl View {
-    Panel::new(
-        ScrollView::new(PageView::new().with_name(PAGE_VIEW_NAME).full_screen()).full_screen(),
-    )
-    .full_screen()
+    ui_cb_sink: Rc<RefCell<CbSink>>,
 }
 
 impl BrowserView {
-    pub fn named() -> NamedView<Self> {
+    pub fn named(ui_cb_sink: Rc<RefCell<CbSink>>) -> NamedView<Self> {
         (BrowserView {
-            view: LinearLayout::vertical()
-                .child(build_navigation_container().with_name(NAVBAR_VIEW_NAME))
-                .child(build_page_container()),
+            ui_cb_sink: ui_cb_sink.clone(),
+            view: LinearLayout::vertical(),
+        })
+        .with(|view| {
+            view.add_navigation_container();
+            view.add_page_container();
         })
         .with_name(BROWSER_VIEW_NAME)
+    }
+
+    fn add_navigation_container(&mut self) {
+        self.view.add_child(
+            NavigationView::new("".to_string())
+                .on_navigation(|s, to| {
+                    if with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to))
+                        .is_none()
+                    {
+                        error!("failed to initiate navigation");
+                    };
+                })
+                .with_name(NAVBAR_VIEW_NAME),
+        )
+    }
+
+    fn add_page_container(&mut self) {
+        self.view.add_child(
+            Panel::new(
+                ScrollView::new(
+                    PageView::new(self.ui_cb_sink.clone())
+                        .with_name(PAGE_VIEW_NAME)
+                        .full_screen(),
+                )
+                .full_screen(),
+            )
+            .full_screen()
+            .with_name(PAGE_VIEW_CONTAINER_NAME),
+        )
     }
 
     pub fn with_page_view_mut<F, R>(&mut self, f: F) -> ::std::option::Option<R>
@@ -94,8 +112,7 @@ impl BrowserView {
         ))?;
 
         // add a new PageView instance
-        self.view
-            .add_child(build_page_container().with_name(PAGE_VIEW_CONTAINER_NAME));
+        self.add_page_container();
 
         // fetch & parse document
         let response = fetch(Request::new(absolute_url.clone()))?;

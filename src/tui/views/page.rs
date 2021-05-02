@@ -13,6 +13,7 @@ use cursive::{
     traits::Boxable,
     view::ViewWrapper,
     views::{Button, LinearLayout, TextView},
+    CbSink, With,
 };
 use log::{error, info};
 use thiserror::Error;
@@ -177,13 +178,16 @@ pub struct PageView {
 }
 
 impl PageView {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(ui_cb_sink: Rc<RefCell<CbSink>>) -> Self {
+        (Self {
             window: None,
             document: None,
             view: LinearLayout::vertical(),
             js_runtime: JavaScriptRuntime::new(),
-        }
+        })
+        .with(|w| {
+            w.js_runtime.set_ui_cb_sink(ui_cb_sink);
+        })
     }
 
     /// This function prepares a new page with given document.

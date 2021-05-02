@@ -1,4 +1,3 @@
-mod components;
-
+pub mod components;
 pub mod logger;
 pub mod views;

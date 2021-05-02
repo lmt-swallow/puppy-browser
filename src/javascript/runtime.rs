@@ -1,14 +1,15 @@
 use crate::{javascript::binding, window::Window};
+use cursive::CbSink;
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
 
-#[derive(Debug)]
 pub struct JavaScriptRuntimeState {
     pub context: v8::Global<v8::Context>,
 
     // TODO (enhancement): remove this by GothamState like Deno does.
     pub window: Option<Rc<RefCell<Window>>>,
+    pub ui_cb_sink: Option<Rc<RefCell<CbSink>>>,
 }
 
 #[derive(Debug)]
@@ -45,6 +46,7 @@ impl JavaScriptRuntime {
         isolate.set_slot(Rc::new(RefCell::new(JavaScriptRuntimeState {
             context: context,
             window: None,
+            ui_cb_sink: None,
         })));
 
         JavaScriptRuntime {
@@ -86,6 +88,20 @@ impl JavaScriptRuntime {
 
     pub fn set_window(&mut self, window: Rc<RefCell<Window>>) {
         self.get_state().borrow_mut().window = Some(window);
+    }
+
+    pub fn ui_cb_sink(isolate: &v8::Isolate) -> Option<Rc<RefCell<CbSink>>> {
+        let state = Self::state(isolate);
+        let state = state.borrow();
+        state.ui_cb_sink.clone()
+    }
+
+    pub fn get_ui_cb_sink(&mut self) -> Option<Rc<RefCell<CbSink>>> {
+        Self::ui_cb_sink(&self.v8_isolate)
+    }
+
+    pub fn set_ui_cb_sink(&mut self, ui_cb_sink: Rc<RefCell<CbSink>>) {
+        self.get_state().borrow_mut().ui_cb_sink = Some(ui_cb_sink);
     }
 
     pub fn execute(
