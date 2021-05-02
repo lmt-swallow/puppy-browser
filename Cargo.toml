@@ -24,3 +24,4 @@ num-derive = "0.3"
 url = "2.2.1"
 reqwest = { version = "0.11", features = ["blocking"] }
 unicode-width = "0.1.8"
+rusty_v8 = "0.22.1"

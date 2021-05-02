@@ -1,10 +1,9 @@
 pub mod components;
-
-pub mod theme;
+pub mod traits;
 
 pub mod menu;
-
-pub mod traits;
+mod navigation;
+mod page_view;
 
 pub mod browser_view;
 pub use self::browser_view::*;

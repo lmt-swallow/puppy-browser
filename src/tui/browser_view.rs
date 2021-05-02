@@ -1,6 +1,3 @@
-use std::error::Error;
-
-use super::traits::Clearable;
 use cursive::{
     traits::Finder,
     view::{Nameable, Resizable, ViewWrapper},
@@ -8,15 +5,15 @@ use cursive::{
     Cursive,
 };
 use log::error;
+use std::error::Error;
 
 use crate::{
     fetch::{fetch, Request},
-    html,
-    ui::components::PageView,
-    url,
+    html, url,
 };
 
-use super::components::NavigationBar;
+use super::{navigation::NavigationBar, page_view::PageView};
+use crate::tui::traits::clearable::Clearable;
 
 pub static BROWSER_VIEW_NAME: &str = "browser-view";
 pub static NAVBAR_VIEW_NAME: &str = "browser-view-navbar";
@@ -88,7 +85,9 @@ impl BrowserView {
             ))?;
 
         self.view
-            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| view.clear())
+            .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
+                view.clear();
+            })
             .ok_or(format!(
                 "failed to clear the current view to render {}; no element container found",
                 absolute_url
@@ -99,12 +98,12 @@ impl BrowserView {
 
         self.view
             .call_on_name(PAGE_VIEW_NAME, |view: &mut PageView| {
-                view.render_document(&document);
+                view.init_page(document)
             })
             .ok_or(format!(
                 "failed to render {}; no element container found",
                 absolute_url
-            ))?;
+            ))??;
 
         Ok(())
     }
