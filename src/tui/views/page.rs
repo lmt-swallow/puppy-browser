@@ -1,17 +1,25 @@
-use crate::tui::render::{RenderError, Renderable};
 use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cursive, With};
 use std::{cell::RefCell, error::Error, rc::Rc};
 
 use crate::{
+    common::{layout::LayoutBox, StyledNode},
     dom::{Node, NodeType},
-    javascript::JavaScriptRuntime,
+    javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
     tui::{components::alert, render::ElementContainer},
     window::Window,
 };
-
 use log::{error, info};
+use thiserror::Error;
 
 use super::PAGE_VIEW_NAME;
+#[derive(Error, Debug, PartialEq)]
+pub enum PageError {
+    #[error("failed to render; no document exists")]
+    NoDocumentError,
+
+    #[error("failed to render; javascript execution failed: {0:?}")]
+    JavaScriptError(JavaScriptRuntimeError),
+}
 
 pub struct PageViewAPIHandler {
     ui_cb_sink: Rc<CbSink>,
@@ -39,7 +47,7 @@ impl PageViewAPIHandler {
             .send(Box::new(move |s: &mut cursive::Cursive| {
                 with_current_page_view(s, |v| {
                     info!("re-rendering started");
-                    match v.layout_document() {
+                    match v.render_document() {
                         Ok(_) => info!("re-rendering finished"),
                         Err(e) => error!("re-rendering failed; {}", e),
                     }
@@ -78,11 +86,11 @@ impl PageView {
     }
 
     /// This function prepares a new page with given document.
-    pub fn init_page(&mut self, document: Node) -> Result<(), RenderError> {
+    pub fn init_page(&mut self, document: Node) -> Result<(), PageError> {
         // assert the argument is Document.
         match document.node_type {
             NodeType::Document(ref _document) => {}
-            _ => return Err(RenderError::NoDocumentError),
+            _ => return Err(PageError::NoDocumentError),
         };
 
         // prepare `Window` object for the new page
@@ -101,7 +109,7 @@ impl PageView {
         self.js_runtime.set_document(document.clone());
 
         // layout document to self.view
-        self.layout_document()?;
+        self.render_document()?;
 
         // run JavaScript
         self.execute_inline_scripts()?;
@@ -109,39 +117,34 @@ impl PageView {
         Ok(())
     }
 
-    /// This function resets `self.view` perfectly.
-    fn reset_view(&mut self) {
-        self.view = ElementContainer::vertical();
-    }
-
     /// This function renders `self.document` to `self.view`.
-    ///
-    /// TODO (enhancement): layout boxes and construct "layout tree" before rendering
-    fn layout_document(&mut self) -> Result<(), RenderError> {
-        self.reset_view();
-
+    fn render_document(&mut self) -> Result<(), PageError> {
         // assert self.document is set
         let document = match &self.document {
             Some(w) => w,
-            None => return Err(RenderError::NoDocumentError),
+            None => return Err(PageError::NoDocumentError),
         };
         let document = document.borrow_mut();
 
-        // render DOM recursively
+        // render document
         let top_element = document.document_element();
-        self.view.render_node(top_element)
+        let styled: &StyledNode = &top_element.into();
+        let layout: LayoutBox = styled.into();
+        self.view = layout.into();
+
+        Ok(())
     }
 
     /// This function run scripts.
     ///
     /// TODO (enhancement): note on "re-entrant" of HTML tree construction
-    fn execute_inline_scripts(&mut self) -> Result<(), RenderError> {
+    fn execute_inline_scripts(&mut self) -> Result<(), PageError> {
         let scripts = {
             // extract inline scripts first to release borrowing of self.document.
             // This should be done before JS access DOM API.
             let document = match &self.document {
                 Some(w) => w,
-                None => return Err(RenderError::NoDocumentError),
+                None => return Err(PageError::NoDocumentError),
             };
             let document = document.borrow_mut();
             document.get_inline_scripts_recursively()
@@ -152,7 +155,7 @@ impl PageView {
                 Ok(s) => {
                     info!("javascript execution succeeded; {}", s);
                 }
-                Err(e) => return Err(RenderError::JavaScriptError(e)),
+                Err(e) => return Err(PageError::JavaScriptError(e)),
             };
         }
         Ok(())

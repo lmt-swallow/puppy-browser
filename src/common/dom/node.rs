@@ -1,3 +1,5 @@
+use crate::common::{PropertyMap, StyledNode};
+
 // `Node` interface
 // definition: https://dom.spec.whatwg.org/#interface-node
 #[derive(Debug, PartialEq)]
@@ -83,6 +85,17 @@ impl Node {
             _ => {
                 vec![]
             }
+        }
+    }
+}
+
+// TODO (enhancement): link with CSS here
+impl<'a> Into<StyledNode<'a>> for &'a Node {
+    fn into(self) -> StyledNode<'a> {
+        StyledNode {
+            node: self,
+            properties: PropertyMap::new(),
+            child_nodes: self.child_nodes.iter().map(|x| x.into()).collect(),
         }
     }
 }

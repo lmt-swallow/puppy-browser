@@ -7,21 +7,13 @@ use crate::{
     tui::{components::TextInputView, views::with_current_browser_view, BrowserView},
 };
 
-use super::RenderError;
-
-pub fn render(_node: &Node, element: &Element) -> Result<Box<dyn View>, RenderError> {
+pub fn render(_node: &Node, element: &Element) -> Box<dyn View> {
     match element
         .attributes
         .get("type")
         .unwrap_or(&"".to_string())
         .as_str()
     {
-        "text" => Ok(Box::new(
-            TextInputView::new()
-                .content(element.attributes.get("value").unwrap_or(&"".to_string()))
-                .min_width(10)
-                .max_width(10),
-        )),
         "button" | "submit" => {
             let onclick = element
                 .attributes
@@ -29,7 +21,7 @@ pub fn render(_node: &Node, element: &Element) -> Result<Box<dyn View>, RenderEr
                 .unwrap_or(&"".to_string())
                 .clone();
 
-            Ok(Box::new(Button::new(
+            Box::new(Button::new(
                 element.attributes.get("value").unwrap_or(&"".to_string()),
                 move |s| {
                     let result = with_current_browser_view(s, |b: &mut BrowserView| {
@@ -43,20 +35,18 @@ pub fn render(_node: &Node, element: &Element) -> Result<Box<dyn View>, RenderEr
                             info!("succeeded to run javascript; {}", message);
                         }
                         Err(e) => {
-                            error!(
-                                "failed to run javascript; {}",
-                                RenderError::JavaScriptError(e)
-                            );
+                            error!("failed to run javascript; {}", e);
                         }
                     }
                 },
-            )))
+            ))
         }
-        t => {
-            info!("unsupported input tag type {} found", t);
-            Err(RenderError::UnsupportedInputTypeError {
-                specified_type: t.to_string(),
-            })
-        }
+        // return text input by default
+        _ => Box::new(
+            TextInputView::new()
+                .content(element.attributes.get("value").unwrap_or(&"".to_string()))
+                .min_width(10)
+                .max_width(10),
+        ),
     }
 }
