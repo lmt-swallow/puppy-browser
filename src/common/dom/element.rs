@@ -12,13 +12,17 @@ pub struct Element {
 }
 
 impl Element {
-    pub fn new(name: String, attributes: AttrMap, children: Vec<Node>) -> Node {
-        Node {
+    pub fn new(name: String, attributes: AttrMap, children: Vec<Box<Node>>) -> Box<Node> {
+        Box::new(Node {
             node_type: NodeType::Element(Element {
                 tag_name: name,
                 attributes: attributes,
             }),
             children,
-        }
+        })
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        self.attributes.get("id")
     }
 }

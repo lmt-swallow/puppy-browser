@@ -14,20 +14,20 @@ impl Document {
     pub fn new(
         url: String,
         document_uri: String,
-        children: Vec<Node>,
-    ) -> Result<Node, DOMException> {
+        children: Vec<Box<Node>>,
+    ) -> Result<Box<Node>, DOMException> {
         if children.len() != 1 {
             Err(DOMException::InvalidDocumentElement)
         } else {
-            Ok(Node {
+            Ok(Box::new(Node {
                 node_type: NodeType::Document(Document {
                     url: url,
                     document_uri: document_uri,
                 }),
                 children,
-            })
+            }))
         }
-    }
+    }   
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@ use rusty_v8 as v8;
 
 use crate::javascript::JavaScriptRuntime;
 
-use super::{create_object_under, set_function_to, set_property};
+use super::{create_object_under, set_function_to, set_property_with_accessor};
 
 pub fn initialize_window<'s>(
     scope: &mut v8::ContextScope<'s, v8::EscapableHandleScope>,
@@ -37,7 +37,7 @@ pub fn initialize_window<'s>(
     );
 
     // `name` property
-    set_property(
+    set_property_with_accessor(
         scope,
         window,
         "name",

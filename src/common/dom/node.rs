@@ -5,7 +5,7 @@ use crate::common::{CSSValue, PropertyMap, StyledNode};
 #[derive(Debug, PartialEq)]
 pub struct Node {
     pub node_type: NodeType,
-    pub children: Vec<Node>,
+    pub children: Vec<Box<Node>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -15,8 +15,19 @@ pub enum NodeType {
     Document(super::document::Document),
 }
 
+fn all_node(node: &Box<Node>) -> Vec<&Box<Node>> {
+    node.children
+        .iter()
+        .chain(vec![node])
+        .map(|n| all_node(n))
+        .collect::<Vec<Vec<&Box<Node>>>>()
+        .into_iter()
+        .flatten()
+        .collect()
+}
+
 impl Node {
-    pub fn append_child(&mut self, n: Node) -> &Node {
+    pub fn append_child(&mut self, n: Box<Node>) -> &Box<Node> {
         self.children.push(n);
         self.children.last().unwrap()
     }
@@ -26,7 +37,7 @@ impl Node {
             .iter()
             .clone()
             .into_iter()
-            .map(|node| match node {
+            .map(|node| match &**node {
                 Node {
                     node_type: NodeType::Text(t),
                     ..
@@ -37,7 +48,7 @@ impl Node {
             .join("")
     }
 
-    pub fn document_element(&self) -> &Self {
+    pub fn document_element(&self) -> &Box<Self> {
         match self.node_type {
             NodeType::Document(ref _document) => {
                 assert_eq!(self.children.len(), 1);
@@ -59,6 +70,19 @@ impl Node {
                 panic!("failed to extract documentElement");
             }
         }
+    }
+
+    pub fn get_element_by_id(&self, id_to_find: String) -> Option<&Box<Node>> {
+        let top_element = self.document_element();
+        all_node(top_element)
+            .into_iter()
+            .find(|x| match &x.node_type {
+                NodeType::Element(e) => e
+                    .id()
+                    .map(|id| id.to_string() == id_to_find)
+                    .unwrap_or(false),
+                _ => false,
+            })
     }
 
     pub fn get_inline_scripts_recursively(&self) -> Vec<String> {
@@ -90,7 +114,7 @@ impl Node {
 }
 
 // TODO (enhancement): link with CSS here
-impl<'a> Into<StyledNode<'a>> for &'a Node {
+impl<'a> Into<StyledNode<'a>> for &'a Box<Node> {
     fn into(self) -> StyledNode<'a> {
         // prepare basic information of StyledNode
         let mut props = PropertyMap::new();

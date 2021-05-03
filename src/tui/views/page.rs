@@ -60,7 +60,7 @@ impl PageViewAPIHandler {
 pub struct PageView {
     // on document shown in the page
     window: Option<Rc<RefCell<Window>>>,
-    document: Option<Rc<RefCell<Node>>>,
+    document: Option<Rc<RefCell<Box<Node>>>>,
 
     // on UI
     view: ElementContainer,
@@ -86,7 +86,7 @@ impl PageView {
     }
 
     /// This function prepares a new page with given document.
-    pub fn init_page(&mut self, document: Node) -> Result<(), PageError> {
+    pub fn init_page(&mut self, document: Box<Node>) -> Result<(), PageError> {
         // assert the argument is Document.
         match document.node_type {
             NodeType::Document(ref _document) => {}

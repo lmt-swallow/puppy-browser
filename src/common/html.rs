@@ -39,15 +39,13 @@ pub enum HTMLParseError {
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
-pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
+pub fn parse(response: Response) -> Result<Box<Node>, HTMLParseError> {
     // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
     // We should determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
-    let body = String::from_utf8(response.data).unwrap();
-
-    let nodes = nodes().parse(&body as &str);
+    let nodes = parse_without_normalziation(response.data);
     match nodes {
-        Ok((nodes, _)) => {
+        Ok(nodes) => {
             let document_element_arr = if nodes.len() == 1 {
                 nodes
             } else {
@@ -62,12 +60,25 @@ pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
                 Err(e) => Err(HTMLParseError::InvalidDocumentError(e)),
             }
         }
+        Err(e) => Err(e),
+    }
+}
+
+pub fn parse_without_normalziation(data: Vec<u8>) -> Result<Vec<Box<Node>>, HTMLParseError> {
+    // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
+    // We should determine character encoding as follows:
+    // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
+    let body = String::from_utf8(data).unwrap();
+
+    let nodes = nodes().parse(&body as &str);
+    match nodes {
+        Ok((nodes, _)) => Ok(nodes),
         Err(e) => Err(HTMLParseError::InvalidResourceError(e)),
     }
 }
 
 // `nodes_` (and `nodes`) tries to parse input as Element or Text.
-fn nodes_<Input>() -> impl Parser<Input, Output = Vec<Node>>
+fn nodes_<Input>() -> impl Parser<Input, Output = Vec<Box<Node>>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
@@ -76,7 +87,7 @@ where
 }
 
 /// `text` consumes input until `<` comes.
-fn text<Input>() -> impl Parser<Input, Output = Node>
+fn text<Input>() -> impl Parser<Input, Output = Box<Node>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
@@ -85,7 +96,7 @@ where
 }
 
 /// `element` consumes `<tag_name attr_name="attr_value" ...>(children)</tag_name>`.
-fn element<Input>() -> impl Parser<Input, Output = Node>
+fn element<Input>() -> impl Parser<Input, Output = Box<Node>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
@@ -170,7 +181,7 @@ where
 }
 
 parser! {
-    fn nodes[Input]()(Input) -> Vec<Node>
+    fn nodes[Input]()(Input) -> Vec<Box<Node>>
     where [Input: Stream<Token = char>]
     {
         nodes_()
@@ -307,7 +318,7 @@ mod tests {
             data: "<p>Hello World</p>".as_bytes().to_vec(),
         };
         let got = parse(s);
-        let expected: Result<Node, HTMLParseError> = Ok(Document::new(
+        let expected = Ok(Document::new(
             Url::parse(url).unwrap().to_string(),
             Url::parse(url).unwrap().to_string(),
             vec![Element::new(

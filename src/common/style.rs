@@ -14,7 +14,7 @@ pub type PropertyMap = HashMap<String, CSSValue>;
 
 #[derive(Debug)]
 pub struct StyledNode<'a> {
-    pub node: &'a Node,
+    pub node: &'a Box<Node>,
     pub properties: PropertyMap,
     pub children: Vec<StyledNode<'a>>,
 }

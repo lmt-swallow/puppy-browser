@@ -8,7 +8,7 @@ pub struct JavaScriptRuntimeState {
 
     // TODO (enhancement): remove this by GothamState like Deno does.
     pub window: Option<Rc<RefCell<Window>>>,
-    pub document: Option<Rc<RefCell<Node>>>,
+    pub document: Option<Rc<RefCell<Box<Node>>>>,
     pub pv_api_handler: Option<Rc<PageViewAPIHandler>>,
 }
 
@@ -117,17 +117,17 @@ impl JavaScriptRuntime {
     // on `Document` object
     ////
 
-    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Node>>> {
+    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Box<Node>>>> {
         let state = Self::state(isolate);
         let state = state.borrow();
         state.document.clone()
     }
 
-    pub fn get_document(&mut self) -> Option<Rc<RefCell<Node>>> {
+    pub fn get_document(&mut self) -> Option<Rc<RefCell<Box<Node>>>> {
         Self::document(&self.v8_isolate)
     }
 
-    pub fn set_document(&mut self, node: Rc<RefCell<Node>>) {
+    pub fn set_document(&mut self, node: Rc<RefCell<Box<Node>>>) {
         self.get_state().borrow_mut().document = Some(node);
     }
 
