@@ -95,13 +95,17 @@ impl<'a> Into<StyledNode<'a>> for &'a Node {
         let mut props = PropertyMap::new();
         let mut children = self.children.iter().map(|x| x.into()).collect();
 
+        // set default styles
         match &self.node_type {
             NodeType::Element(e) => match e.tag_name.as_str() {
                 "script" => {
                     props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
                 }
                 "div" => {
-                    props.insert("display".to_string(), CSSValue::Keyword("block".to_string()));
+                    props.insert(
+                        "display".to_string(),
+                        CSSValue::Keyword("block".to_string()),
+                    );
                 }
                 "button" | "a" => {
                     children = vec![];
