@@ -92,6 +92,7 @@ impl Node {
 // TODO (enhancement): link with CSS here
 impl<'a> Into<StyledNode<'a>> for &'a Node {
     fn into(self) -> StyledNode<'a> {
+        // prepare basic information of StyledNode
         let mut props = PropertyMap::new();
         let mut children = self.children.iter().map(|x| x.into()).collect();
 
@@ -115,6 +116,7 @@ impl<'a> Into<StyledNode<'a>> for &'a Node {
             _ => {}
         };
 
+        // all set :-)
         StyledNode {
             node: self,
             properties: props,
