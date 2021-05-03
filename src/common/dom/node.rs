@@ -1,4 +1,6 @@
-use crate::common::{CSSValue, PropertyMap, StyledNode};
+use std::error::Error;
+
+use crate::common::{html::parse_without_normalziation, CSSValue, PropertyMap, StyledNode};
 
 // `Node` interface
 // definition: https://dom.spec.whatwg.org/#interface-node
@@ -15,15 +17,46 @@ pub enum NodeType {
     Document(super::document::Document),
 }
 
-fn all_node(node: &Box<Node>) -> Vec<&Box<Node>> {
+fn all_node(node: &mut Box<Node>) -> Vec<&mut Box<Node>> {
     node.children
-        .iter()
+        .iter_mut()
         .chain(vec![node])
         .map(|n| all_node(n))
-        .collect::<Vec<Vec<&Box<Node>>>>()
+        .collect::<Vec<Vec<&mut Box<Node>>>>()
         .into_iter()
         .flatten()
         .collect()
+}
+
+impl ToString for Node {
+    fn to_string(&self) -> String {
+        match self.node_type {
+            NodeType::Element(ref e) => {
+                let attrs = e
+                    .attributes
+                    .iter()
+                    .clone()
+                    .into_iter()
+                    .map(|(k, v)| {
+                        // TODO (security): do this securely! This might causes mXSS.
+                        format!("{}=\"{}\"", k, v)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let children = self
+                    .children
+                    .iter()
+                    .clone()
+                    .into_iter()
+                    .map(|node| node.inner_html())
+                    .collect::<Vec<_>>()
+                    .join("");
+                format!("<{} {}>{}</{}>", e.tag_name, attrs, children, e.tag_name)
+            }
+            NodeType::Text(ref t) => t.data.to_string(),
+            _ => "".to_string(),
+        }
+    }
 }
 
 impl Node {
@@ -48,6 +81,22 @@ impl Node {
             .join("")
     }
 
+    pub fn inner_html(&self) -> String {
+        self.children
+            .iter()
+            .clone()
+            .into_iter()
+            .map(|node| node.to_string())
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
+    pub fn set_inner_html(&mut self, html: String) -> Result<(), Box<dyn Error>> {
+        let node = parse_without_normalziation(html.as_bytes().into())?;
+        self.children = node;
+        Ok(())
+    }
+
     pub fn document_element(&self) -> &Box<Self> {
         match self.node_type {
             NodeType::Document(ref _document) => {
@@ -60,7 +109,7 @@ impl Node {
         }
     }
 
-    pub fn document_element_mut(&mut self) -> &mut Node {
+    pub fn document_element_mut(&mut self) -> &mut Box<Node> {
         match self.node_type {
             NodeType::Document(ref _document) => {
                 assert_eq!(self.children.len(), 1);
@@ -72,17 +121,9 @@ impl Node {
         }
     }
 
-    pub fn get_element_by_id(&self, id_to_find: String) -> Option<&Box<Node>> {
-        let top_element = self.document_element();
+    pub fn all(&mut self) -> Vec<&mut Box<Node>> {
+        let top_element = self.document_element_mut();
         all_node(top_element)
-            .into_iter()
-            .find(|x| match &x.node_type {
-                NodeType::Element(e) => e
-                    .id()
-                    .map(|id| id.to_string() == id_to_find)
-                    .unwrap_or(false),
-                _ => false,
-            })
     }
 
     pub fn get_inline_scripts_recursively(&self) -> Vec<String> {

@@ -25,4 +25,13 @@ impl Element {
     pub fn id(&self) -> Option<&String> {
         self.attributes.get("id")
     }
+
+    pub fn attributes(&self) -> Vec<(String, String)> {
+        self.attributes
+            .iter()
+            .clone()
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
 }
