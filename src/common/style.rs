@@ -5,12 +5,14 @@ use super::{
     layout::{BoxType, LayoutBox},
 };
 // See: https://www.w3.org/TR/css-values-3/#component-types
+#[derive(Debug)]
 pub enum CSSValue {
     Keyword(String),
 }
 
 pub type PropertyMap = HashMap<String, CSSValue>;
 
+#[derive(Debug)]
 pub struct StyledNode<'a> {
     pub node: &'a Node,
     pub properties: PropertyMap,

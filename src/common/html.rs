@@ -6,11 +6,12 @@ use combine::{
     attempt,
     error::{StreamError, StringStreamError},
     many,
+    parser::char::{newline, space},
 };
 use combine::{between, many1, parser, sep_by, Parser, Stream};
 use combine::{choice, error::ParseError};
 use combine::{
-    parser::char::{char, letter, spaces},
+    parser::char::{char, letter},
     satisfy,
 };
 use thiserror::Error;
@@ -113,8 +114,12 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let open_tag_name = many1::<String, _, _>(letter());
-    let open_tag_content =
-        (open_tag_name, spaces(), attributes()).map(|v: (String, _, AttrMap)| (v.0, v.2));
+    let open_tag_content = (
+        open_tag_name,
+        many::<String, _, _>(space().or(newline())),
+        attributes(),
+    )
+        .map(|v: (String, _, AttrMap)| (v.0, v.2));
     between(char('<'), char('>'), open_tag_content)
 }
 
@@ -140,9 +145,9 @@ where
     let attribute_value = between(char('"'), char('"'), attribute_inner_value);
     (
         attribute_name,
-        spaces(),
+        many::<String, _, _>(space().or(newline())),
         char('='),
-        spaces(),
+        many::<String, _, _>(space().or(newline())),
         attribute_value,
     )
         .map(|v| (v.0, v.4))
@@ -154,12 +159,14 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    sep_by::<Vec<(String, String)>, _, _, _>(attribute(), spaces()).map(
-        |attrs: Vec<(String, String)>| {
-            let m: AttrMap = attrs.into_iter().collect();
-            m
-        },
+    sep_by::<Vec<(String, String)>, _, _, _>(
+        attribute(),
+        many::<String, _, _>(space().or(newline())),
     )
+    .map(|attrs: Vec<(String, String)>| {
+        let m: AttrMap = attrs.into_iter().collect();
+        m
+    })
 }
 
 parser! {

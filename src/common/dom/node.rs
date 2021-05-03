@@ -1,4 +1,4 @@
-use crate::common::{PropertyMap, StyledNode};
+use crate::common::{CSSValue, PropertyMap, StyledNode};
 
 // `Node` interface
 // definition: https://dom.spec.whatwg.org/#interface-node
@@ -92,10 +92,29 @@ impl Node {
 // TODO (enhancement): link with CSS here
 impl<'a> Into<StyledNode<'a>> for &'a Node {
     fn into(self) -> StyledNode<'a> {
+        let mut props = PropertyMap::new();
+        let mut children = self.children.iter().map(|x| x.into()).collect();
+
+        match &self.node_type {
+            NodeType::Element(e) => match e.tag_name.as_str() {
+                "script" => {
+                    props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
+                }
+                "div" => {
+                    props.insert("display".to_string(), CSSValue::Keyword("block".to_string()));
+                }
+                "button" | "a" => {
+                    children = vec![];
+                }
+                _ => {}
+            },
+            _ => {}
+        };
+
         StyledNode {
             node: self,
-            properties: PropertyMap::new(),
-            children: self.children.iter().map(|x| x.into()).collect(),
+            properties: props,
+            children: children,
         }
     }
 }

@@ -1,10 +1,12 @@
 use super::StyledNode;
 
+#[derive(Debug)]
 pub struct LayoutBox<'a> {
     pub box_type: BoxType<'a>,
     pub children: Vec<LayoutBox<'a>>,
 }
 
+#[derive(Debug)]
 pub enum BoxType<'a> {
     BlockNode(&'a StyledNode<'a>),
     InlineNode(&'a StyledNode<'a>),

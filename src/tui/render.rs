@@ -18,29 +18,18 @@ impl<'a> Into<ElementContainer> for LayoutBox<'a> {
     fn into(self) -> ElementContainer {
         // render the children
         let mut container = match self.box_type {
-            BoxType::BlockNode(_) => {
-                let mut container = LinearLayout::vertical();
-                for child in self.children {
-                    container.add_child::<ElementContainer>(child.into());
-                }
-                container
+            BoxType::NoneNode(_) => {
+                return LinearLayout::horizontal();
             }
-            BoxType::InlineNode(_) => {
-                let mut container = LinearLayout::horizontal();
-                for child in self.children {
-                    container.add_child::<ElementContainer>(child.into());
-                }
-                container
-            }
-            BoxType::AnonymousBlock => {
-                let mut container = LinearLayout::horizontal();
-                for child in self.children {
-                    container.add_child::<ElementContainer>(child.into());
-                }
-                container
-            }
-            BoxType::NoneNode(_) => LinearLayout::horizontal(),
+            BoxType::BlockNode(_) => LinearLayout::vertical(),
+            BoxType::InlineNode(_) | BoxType::AnonymousBlock => LinearLayout::horizontal(),
         };
+        for child in self.children {
+            let e: ElementContainer = child.into();
+            if e.len() != 0 {
+                container.add_child(e);
+            }
+        }
 
         // render the node of layout box
         let element = match self.box_type {
@@ -52,7 +41,16 @@ impl<'a> Into<ElementContainer> for LayoutBox<'a> {
                     "button" => Some(button::render(node, element)),
                     _ => None,
                 },
-                NodeType::Text(ref t) => Some(Box::new(TextView::new(&t.data)) as Box<dyn View>),
+                NodeType::Text(ref t) => {
+                    // NOTE: This is puppy original behaviour, not a standard one.
+                    let text_to_display = t.data.clone();
+                    let text_to_display = text_to_display.replace("\n", "");
+                    if text_to_display.trim() != "" {
+                        Some(Box::new(TextView::new(text_to_display.trim())) as Box<dyn View>)
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             },
             _ => None,
