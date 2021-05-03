@@ -13,7 +13,7 @@ impl Text {
     pub fn new(text: String) -> Node {
         Node {
             node_type: NodeType::Text(Text { data: text }),
-            child_nodes: vec![],
+            children: vec![],
         }
     }
 }

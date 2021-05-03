@@ -90,9 +90,9 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (open_tag(), nodes(), close_tag()).and_then(
-        |((open_tag_name, attributes), child_nodes, close_tag_name)| {
+        |((open_tag_name, attributes), children, close_tag_name)| {
             if open_tag_name == close_tag_name {
-                Ok(Element::new(open_tag_name, attributes, child_nodes))
+                Ok(Element::new(open_tag_name, attributes, children))
             } else {
                 Err(<Input::Error as combine::error::ParseError<
                     char,

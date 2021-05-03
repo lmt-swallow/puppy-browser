@@ -14,9 +14,9 @@ impl Document {
     pub fn new(
         url: String,
         document_uri: String,
-        child_nodes: Vec<Node>,
+        children: Vec<Node>,
     ) -> Result<Node, DOMException> {
-        if child_nodes.len() != 1 {
+        if children.len() != 1 {
             Err(DOMException::InvalidDocumentElement)
         } else {
             Ok(Node {
@@ -24,7 +24,7 @@ impl Document {
                     url: url,
                     document_uri: document_uri,
                 }),
-                child_nodes: child_nodes,
+                children,
             })
         }
     }

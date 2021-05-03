@@ -5,7 +5,7 @@ use crate::common::{PropertyMap, StyledNode};
 #[derive(Debug, PartialEq)]
 pub struct Node {
     pub node_type: NodeType,
-    pub child_nodes: Vec<Node>,
+    pub children: Vec<Node>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -17,12 +17,12 @@ pub enum NodeType {
 
 impl Node {
     pub fn append_child(&mut self, n: Node) -> &Node {
-        self.child_nodes.push(n);
-        self.child_nodes.last().unwrap()
+        self.children.push(n);
+        self.children.last().unwrap()
     }
 
     pub fn inner_text(&self) -> String {
-        self.child_nodes
+        self.children
             .iter()
             .clone()
             .into_iter()
@@ -40,8 +40,8 @@ impl Node {
     pub fn document_element(&self) -> &Self {
         match self.node_type {
             NodeType::Document(ref _document) => {
-                assert_eq!(self.child_nodes.len(), 1);
-                self.child_nodes.get(0).unwrap()
+                assert_eq!(self.children.len(), 1);
+                self.children.get(0).unwrap()
             }
             _ => {
                 panic!("failed to extract documentElement");
@@ -52,8 +52,8 @@ impl Node {
     pub fn document_element_mut(&mut self) -> &mut Node {
         match self.node_type {
             NodeType::Document(ref _document) => {
-                assert_eq!(self.child_nodes.len(), 1);
-                self.child_nodes.get_mut(0).unwrap()
+                assert_eq!(self.children.len(), 1);
+                self.children.get_mut(0).unwrap()
             }
             _ => {
                 panic!("failed to extract documentElement");
@@ -64,7 +64,7 @@ impl Node {
     pub fn get_inline_scripts_recursively(&self) -> Vec<String> {
         match self.node_type {
             NodeType::Document(ref _document) => self
-                .child_nodes
+                .children
                 .iter()
                 .map(|node| node.get_inline_scripts_recursively())
                 .collect::<Vec<Vec<String>>>()
@@ -74,7 +74,7 @@ impl Node {
             NodeType::Element(ref element) => match element.tag_name.as_str() {
                 "script" => vec![self.inner_text()],
                 _ => self
-                    .child_nodes
+                    .children
                     .iter()
                     .map(|node| node.get_inline_scripts_recursively())
                     .collect::<Vec<Vec<String>>>()
@@ -95,7 +95,7 @@ impl<'a> Into<StyledNode<'a>> for &'a Node {
         StyledNode {
             node: self,
             properties: PropertyMap::new(),
-            child_nodes: self.child_nodes.iter().map(|x| x.into()).collect(),
+            children: self.children.iter().map(|x| x.into()).collect(),
         }
     }
 }
@@ -109,9 +109,9 @@ mod tests {
         let mut node = Element::new("p".to_string(), AttrMap::new(), vec![]);
 
         node.append_child(Element::new("p".to_string(), AttrMap::new(), vec![]));
-        assert_eq!(node.child_nodes.len(), 1);
+        assert_eq!(node.children.len(), 1);
 
         node.append_child(Element::new("p".to_string(), AttrMap::new(), vec![]));
-        assert_eq!(node.child_nodes.len(), 2)
+        assert_eq!(node.children.len(), 2)
     }
 }

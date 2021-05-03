@@ -14,7 +14,7 @@ pub type PropertyMap = HashMap<String, CSSValue>;
 pub struct StyledNode<'a> {
     pub node: &'a Node,
     pub properties: PropertyMap,
-    pub child_nodes: Vec<StyledNode<'a>>,
+    pub children: Vec<StyledNode<'a>>,
 }
 
 pub enum Display {
@@ -52,7 +52,7 @@ impl<'a> Into<LayoutBox<'a>> for &'a StyledNode<'a> {
             children: vec![],
         };
 
-        for node in &self.child_nodes {
+        for node in &self.children {
             match node.display() {
                 Display::Block => {
                     layout.children.push(node.into());

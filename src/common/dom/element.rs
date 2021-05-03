@@ -12,13 +12,13 @@ pub struct Element {
 }
 
 impl Element {
-    pub fn new(name: String, attributes: AttrMap, child_nodes: Vec<Node>) -> Node {
+    pub fn new(name: String, attributes: AttrMap, children: Vec<Node>) -> Node {
         Node {
             node_type: NodeType::Element(Element {
                 tag_name: name,
                 attributes: attributes,
             }),
-            child_nodes: child_nodes,
+            children,
         }
     }
 }
