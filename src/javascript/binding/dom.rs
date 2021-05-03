@@ -150,17 +150,16 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
                 let mut document = document.borrow_mut();
 
                 // get all nodes
-                let all = document.all();
-                let all: Vec<v8::Local<v8::Value>> = all
-                    .into_iter()
-                    .filter_map(|n| {
-                        let (tag_name, attributes) = match n.node_type {
-                            NodeType::Element(ref e) => (e.tag_name.clone(), e.attributes()),
-                            _ => return None,
-                        };
-                        Some(to_v8_element(scope, tag_name.as_str(), attributes, n).into())
-                    })
-                    .collect();
+                let document_element = document.document_element_mut();
+
+                let mut f = |n: &mut Box<Node>| -> Option<v8::Local<v8::Value>> {
+                    let (tag_name, attributes) = match n.node_type {
+                        NodeType::Element(ref e) => (e.tag_name.clone(), e.attributes()),
+                        _ => return None,
+                    };
+                    Some(to_v8_element(scope, tag_name.as_str(), attributes, n).into())
+                };
+                let all: Vec<v8::Local<v8::Value>> = document_element.children_filter_map(&mut f);
                 let all = v8::Array::new_with_elements(scope, all.as_slice());
 
                 // all set!

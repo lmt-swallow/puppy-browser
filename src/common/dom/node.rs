@@ -17,17 +17,6 @@ pub enum NodeType {
     Document(super::document::Document),
 }
 
-fn all_node(node: &mut Box<Node>) -> Vec<&mut Box<Node>> {
-    node.children
-        .iter_mut()
-        .chain(vec![node])
-        .map(|n| all_node(n))
-        .collect::<Vec<Vec<&mut Box<Node>>>>()
-        .into_iter()
-        .flatten()
-        .collect()
-}
-
 impl ToString for Node {
     fn to_string(&self) -> String {
         match self.node_type {
@@ -97,6 +86,37 @@ impl Node {
         Ok(())
     }
 
+    pub fn children_map<T, F>(&mut self, f: &mut F) -> Vec<T>
+    where
+        F: FnMut(&mut Box<Node>) -> T,
+    {
+        let mut v: Vec<T> = vec![];
+
+        // v.push(f(self));
+        for child in &mut self.children {
+            v.push(f(child));
+            v.extend(child.children_map(f));
+        }
+
+        v
+    }
+
+    pub fn children_filter_map<T, F>(&mut self, f: &mut F) -> Vec<T>
+    where
+        F: FnMut(&mut Box<Node>) -> Option<T>,
+    {
+        let mut v: Vec<T> = vec![];
+
+        for child in &mut self.children {
+            if let Some(r) = f(child) {
+                v.push(r);
+            }
+            v.extend(child.children_filter_map(f));
+        }
+
+        v
+    }
+
     pub fn document_element(&self) -> &Box<Self> {
         match self.node_type {
             NodeType::Document(ref _document) => {
@@ -119,11 +139,6 @@ impl Node {
                 panic!("failed to extract documentElement");
             }
         }
-    }
-
-    pub fn all(&mut self) -> Vec<&mut Box<Node>> {
-        let top_element = self.document_element_mut();
-        all_node(top_element)
     }
 
     pub fn get_inline_scripts_recursively(&self) -> Vec<String> {

@@ -27,7 +27,7 @@ impl Document {
                 children,
             }))
         }
-    }   
+    }
 }
 
 #[cfg(test)]
