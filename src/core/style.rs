@@ -22,7 +22,7 @@ pub enum Display {
 /// It forms a tree as `Node` does.
 #[derive(Debug)]
 pub struct StyledNode<'a> {
-    pub node: &'a Box<Node>,
+    pub node_type: &'a NodeType,
     pub properties: PropertyMap,
     pub children: Vec<StyledNode<'a>>,
 }
@@ -37,6 +37,19 @@ impl<'a> StyledNode<'a> {
             },
             _ => Display::Inline,
         }
+    }
+
+    pub fn inner_text(&self) -> String {
+        self.children
+            .iter()
+            .clone()
+            .into_iter()
+            .map(|node| match &node.node_type {
+                NodeType::Text(t) => t.data.clone(),
+                _ => node.inner_text(),
+            })
+            .collect::<Vec<_>>()
+            .join("")
     }
 
     pub fn get_style_property(&self, name: &str) -> Option<&CSSValue> {
@@ -77,7 +90,7 @@ impl<'a> From<&'a Box<Node>> for StyledNode<'a> {
 
         // all set :-)
         StyledNode {
-            node,
+            node_type: &node.node_type,
             properties: props,
             children: children,
         }

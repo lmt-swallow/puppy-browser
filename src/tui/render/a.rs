@@ -1,11 +1,11 @@
 use cursive::View;
 
 use crate::{
-    core::dom::{element::Element, Node},
+    core::{dom::element::Element, style::StyledNode},
     tui::{components::Link, views::with_current_browser_view, BrowserView},
 };
 
-pub fn render(node: &Node, element: &Element) -> Box<dyn View> {
+pub fn render(node: &StyledNode, element: &Element) -> Box<dyn View> {
     let link_href: String = element
         .attributes
         .get("href")

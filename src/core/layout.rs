@@ -37,7 +37,7 @@ impl<'a> LayoutBox<'a> {
 }
 
 impl<'a> From<&'a StyledNode<'a>> for LayoutBox<'a> {
-    fn from(snode: &'a StyledNode<'a>) -> Self {
+    fn from(snode: &'a StyledNode) -> Self {
         let box_type = match snode.display() {
             Display::Block => BoxType::BlockNode(&snode),
             Display::Inline => BoxType::InlineNode(&snode),

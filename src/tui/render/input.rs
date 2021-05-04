@@ -3,11 +3,11 @@ use cursive::{traits::Boxable, View};
 use log::{error, info};
 
 use crate::{
-    core::dom::{element::Element, Node},
+    core::{dom::element::Element, style::StyledNode},
     tui::{components::TextInputView, views::with_current_browser_view, BrowserView},
 };
 
-pub fn render(_node: &Node, element: &Element) -> Box<dyn View> {
+pub fn render(_node: &StyledNode, element: &Element) -> Box<dyn View> {
     match element
         .attributes
         .get("type")

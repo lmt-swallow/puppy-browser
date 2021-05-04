@@ -1,7 +1,6 @@
 use crate::core::{
     dom::NodeType,
     layout::{BoxType, LayoutBox},
-    style::StyledNode,
 };
 use cursive::{
     views::{LinearLayout, TextView},
@@ -32,11 +31,11 @@ impl<'a> From<LayoutBox<'a>> for ElementContainer {
 
         // render the node of layout box
         let element = match layout.box_type {
-            BoxType::BlockNode(&StyledNode { node, .. })
-            | BoxType::InlineNode(&StyledNode { node, .. }) => match node.node_type {
+            BoxType::BlockNode(snode)
+            | BoxType::InlineNode(snode) => match snode.node_type {
                 NodeType::Element(ref element) => match element.tag_name.as_str() {
-                    "a" => Some(a::render(node, element)),
-                    "input" => Some(input::render(node, element)),
+                    "a" => Some(a::render(snode, element)),
+                    "input" => Some(input::render(snode, element)),
                     _ => None,
                 },
                 NodeType::Text(ref t) => {

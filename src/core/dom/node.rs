@@ -26,12 +26,9 @@ impl Node {
             .iter()
             .clone()
             .into_iter()
-            .map(|node| match &**node {
-                Node {
-                    node_type: NodeType::Text(t),
-                    ..
-                } => t.data.clone(),
-                n => n.inner_text(),
+            .map(|node| match &node.node_type {
+                NodeType::Text(t) => t.data.clone(),
+                _ => node.inner_text(),
             })
             .collect::<Vec<_>>()
             .join("")
@@ -83,7 +80,6 @@ impl Node {
         v
     }
 
- 
     pub fn get_inline_scripts_recursively(&self) -> Vec<String> {
         match self.node_type {
             NodeType::Element(ref element) => match element.tag_name.as_str() {
