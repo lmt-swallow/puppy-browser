@@ -1026,6 +1026,7 @@ dependencies = [
  "chrono",
  "clap-verbosity-flag",
  "combine",
+ "crossbeam-channel",
  "cursive",
  "cursive-aligned-view",
  "fern",

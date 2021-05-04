@@ -1,11 +1,11 @@
 use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cursive, With};
-use std::{cell::RefCell, error::Error, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     common::{layout::LayoutBox, StyledNode},
     dom::{Node, NodeType},
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
-    tui::{components::alert, render::ElementContainer},
+    tui::{render::ElementContainer, PageViewAPIHandler},
     window::Window,
 };
 use log::{error, info};
@@ -19,42 +19,6 @@ pub enum PageError {
 
     #[error("failed to render; javascript execution failed: {0:?}")]
     JavaScriptError(JavaScriptRuntimeError),
-}
-
-pub struct PageViewAPIHandler {
-    ui_cb_sink: Rc<CbSink>,
-}
-
-impl PageViewAPIHandler {
-    pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
-        Self {
-            ui_cb_sink: ui_cb_sink,
-        }
-    }
-
-    pub fn alert(&self, message: String) -> Result<(), Box<dyn Error>> {
-        self.ui_cb_sink
-            .send(Box::new(move |s: &mut cursive::Cursive| {
-                alert(s, "from JavaScript".to_string(), message);
-            }))?;
-
-        // TODO (enhancement): do this synchronoulsly & error handling
-        Ok(())
-    }
-
-    pub fn request_rerender(&self) -> Result<(), Box<dyn Error>> {
-        self.ui_cb_sink
-            .send(Box::new(move |s: &mut cursive::Cursive| {
-                with_current_page_view(s, |v| {
-                    info!("re-rendering started");
-                    match v.render_document() {
-                        Ok(_) => info!("re-rendering finished"),
-                        Err(e) => error!("re-rendering failed; {}", e),
-                    }
-                });
-            }))?;
-        Ok(())
-    }
 }
 
 pub struct PageView {
@@ -81,7 +45,7 @@ impl PageView {
         })
         .with(|v| {
             v.js_runtime
-                .set_pv_api_handler(PageViewAPIHandler::new(ui_cb_sink));
+                .set_pv_api_handler(Rc::new(PageViewAPIHandler::new(ui_cb_sink)));
         })
     }
 
@@ -118,7 +82,7 @@ impl PageView {
     }
 
     /// This function renders `self.document` to `self.view`.
-    fn render_document(&mut self) -> Result<(), PageError> {
+    pub fn render_document(&mut self) -> Result<(), PageError> {
         // assert self.document is set
         let document = match &self.document {
             Some(w) => w,

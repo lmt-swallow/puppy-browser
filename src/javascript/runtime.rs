@@ -31,7 +31,7 @@ impl JavaScriptRuntime {
     pub fn new() -> Self {
         // init v8 platform just once
         static PUPPY_INIT: Once = Once::new();
-        PUPPY_INIT.call_once(move || super::v8_init::init_platform());
+        PUPPY_INIT.call_once(move || super::v8_init::init_platform().unwrap());
 
         // create v8 isolate & context
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
@@ -110,8 +110,8 @@ impl JavaScriptRuntime {
         Self::pv_api_handler(&self.v8_isolate)
     }
 
-    pub fn set_pv_api_handler(&mut self, view_api_handler: PageViewAPIHandler) {
-        self.get_state().borrow_mut().pv_api_handler = Some(Rc::new(view_api_handler));
+    pub fn set_pv_api_handler(&mut self, view_api_handler: Rc<PageViewAPIHandler>) {
+        self.get_state().borrow_mut().pv_api_handler = Some(view_api_handler);
     }
 
     // on `Document` object
@@ -207,4 +207,150 @@ fn to_pretty_string(mut try_catch: v8::TryCatch<v8::HandleScope>) -> String {
         );
     let line_number = message.get_line_number(&mut try_catch).unwrap_or_default();
     format!("{}:{}: {}", filename, line_number, exception_string)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::common::dom::{
+        element::{AttrMap, Element},
+        Document, Text,
+    };
+
+    use super::*;
+    #[test]
+    fn test_execute() {
+        let mut runtime = JavaScriptRuntime::new();
+        {
+            // a simple math
+            let r = runtime.execute("", "1 + 1");
+            assert!(r.is_ok());
+            assert_eq!(r.unwrap(), "2");
+        }
+        {
+            // simple string operation
+            let r = runtime.execute("", "'test' + \"func\" + `012${1+1+1}`");
+            assert!(r.is_ok());
+            assert_eq!(r.unwrap(), "testfunc0123");
+        }
+        {
+            // use of undefined variable
+            let r = runtime.execute("", "test");
+            assert!(r.is_err());
+        }
+        {
+            // lambda definition
+            let r = runtime.execute("", "let inc = (i) => { return i + 1 }; inc(1)");
+            assert!(r.is_ok());
+            assert_eq!(r.unwrap(), "2");
+        }
+        {
+            // variable reuse
+            let r = runtime.execute("", "inc(4)");
+            assert!(r.is_ok());
+            assert_eq!(r.unwrap(), "5");
+        }
+    }
+
+    fn setup_runtime(
+        runtime: &mut JavaScriptRuntime,
+    ) -> (
+        Rc<RefCell<Box<Node>>>,
+        Rc<RefCell<Window>>,
+        Rc<PageViewAPIHandler>,
+    ) {
+        let document = Rc::new(RefCell::new(
+            Document::new(
+                "http://example.com".to_string(),
+                "http://example.com".to_string(),
+                vec![Element::new(
+                    "p".to_string(),
+                    AttrMap::new(),
+                    vec![Text::new("hi".to_string())],
+                )],
+            )
+            .unwrap(),
+        ));
+        runtime.set_document(document.clone());
+
+        let window = Rc::new(RefCell::new(Window {
+            name: "test".to_string(),
+        }));
+        runtime.set_window(window.clone());
+
+        let (cb_sink, _) = crossbeam_channel::unbounded();
+        let cb_sink = Rc::new(cb_sink);
+        let api = Rc::new(PageViewAPIHandler::new(cb_sink));
+        runtime.set_pv_api_handler(api.clone());
+
+        (document.clone(), window.clone(), api.clone())
+    }
+
+    #[test]
+    fn test_state_store() {
+        let mut runtime = JavaScriptRuntime::new();
+
+        // check pre-state
+        {
+            let state = runtime.get_state();
+            let state = state.borrow_mut();
+            assert!(state.document.is_none());
+            assert!(state.window.is_none());
+            assert!(state.pv_api_handler.is_none());
+        }
+
+        // change state
+        let (document, window, _) = setup_runtime(&mut runtime);
+
+        // change post-state
+        {
+            let state = runtime.get_state();
+            let state = state.borrow_mut();
+            assert_eq!(state.document, Some(document.clone()));
+            assert_eq!(state.window, Some(window.clone()));
+            assert!(state.pv_api_handler.is_some());
+        }
+    }
+
+    #[test]
+    fn test_window() {
+        let mut runtime = JavaScriptRuntime::new();
+        let (_, window, _) = setup_runtime(&mut runtime);
+
+        let r_window = runtime.get_window();
+        assert_eq!(r_window, Some(window.clone()));
+        assert_eq!(
+            JavaScriptRuntime::window(&mut runtime.v8_isolate),
+            Some(window.clone())
+        );
+    }
+
+    #[test]
+    fn test_document() {
+        let mut runtime = JavaScriptRuntime::new();
+        let (document, _, _) = setup_runtime(&mut runtime);
+
+        let r_document = runtime.get_document();
+        assert_eq!(r_document, Some(document.clone()));
+        assert_eq!(
+            JavaScriptRuntime::document(&mut runtime.v8_isolate),
+            Some(document.clone())
+        );
+    }
+
+    #[test]
+    fn test_api_handler() {
+        let mut runtime = JavaScriptRuntime::new();
+        let _ = setup_runtime(&mut runtime);
+
+        // run set_pv_api_handler again to mock the channel
+        let (cb_sink, cb_recv) = crossbeam_channel::unbounded();
+        let cb_sink = Rc::new(cb_sink);
+        let api = Rc::new(PageViewAPIHandler::new(cb_sink));
+        runtime.set_pv_api_handler(api.clone());
+
+        // run scripts and check api is appropriately called
+        assert!(runtime.execute("", "window.alert(1)").is_ok());
+        assert!(cb_recv.try_recv().is_ok());
+        assert!(cb_recv.try_recv().is_err());
+    }
 }
