@@ -37,18 +37,22 @@ mod tests {
     #[test]
     fn test_valid_new() {
         let url = "http://example.com";
-        if let Ok(document) = Document::new(url.to_string(), url.to_string(), vec![]) {
-            match document.node_type {
-                NodeType::Document(props) => {
-                    assert_eq!(props.url, url.to_string());
-                    assert_eq!(props.document_uri, url.to_string());
-                }
-                _ => {
-                    assert!(false);
-                }
+        let document = Document::new(
+            url.to_string(),
+            url.to_string(),
+            vec![Element::new("p".to_string(), AttrMap::new(), vec![])],
+        );
+        assert!(document.is_ok());
+
+        let document = document.unwrap();
+        match document.node_type {
+            NodeType::Document(props) => {
+                assert_eq!(props.url, url.to_string());
+                assert_eq!(props.document_uri, url.to_string());
             }
-        } else {
-            assert!(false);
+            _ => {
+                assert!(false);
+            }
         }
     }
 
