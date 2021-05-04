@@ -188,7 +188,7 @@ impl<'a> Into<StyledNode<'a>> for &'a Box<Node> {
                         CSSValue::Keyword("block".to_string()),
                     );
                 }
-                "button" | "a" => {
+                "a" => {
                     children = vec![];
                 }
                 _ => {}

@@ -9,7 +9,6 @@ use cursive::{
 };
 
 mod a;
-mod button;
 mod input;
 
 pub type ElementContainer = LinearLayout;
@@ -38,7 +37,6 @@ impl<'a> Into<ElementContainer> for LayoutBox<'a> {
                 NodeType::Element(ref element) => match element.tag_name.as_str() {
                     "a" => Some(a::render(node, element)),
                     "input" => Some(input::render(node, element)),
-                    "button" => Some(button::render(node, element)),
                     _ => None,
                 },
                 NodeType::Text(ref t) => {

@@ -84,6 +84,13 @@ fn to_v8_element<'s>(
         set_readonly_constant(scope, node, "tagName", tag_name.into());
     }
     {
+        // set attributes as properties
+        for (key, value) in attributes {
+            let value = v8::String::new(scope, value.as_str()).unwrap();
+            set_readonly_constant(scope, node, key.as_str(), value.into());
+        }
+    }
+    {
         // add `innerHTML` property
         // TODO (security): the setter might cause dangling pointer from v8 to rust's heap.
         // This is because objects returned by `document.all` have pointers to rust's heap their own internal fields,
@@ -136,8 +143,8 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
             document,
             "all",
             |scope: &mut v8::HandleScope,
-             key: v8::Local<v8::Name>,
-             args: v8::PropertyCallbackArguments,
+             _key: v8::Local<v8::Name>,
+             _args: v8::PropertyCallbackArguments,
              mut rv: v8::ReturnValue| {
                 // get puppy's document object
                 let document = match JavaScriptRuntime::document(scope) {
@@ -159,15 +166,17 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
                     };
                     Some(to_v8_element(scope, tag_name.as_str(), attributes, n).into())
                 };
-                let all: Vec<v8::Local<v8::Value>> = document_element.children_filter_map(&mut f);
+                let mut all: Vec<v8::Local<v8::Value>> =
+                    document_element.children_filter_map(&mut f);
+                all.insert(0, f(document_element).unwrap());
                 let all = v8::Array::new_with_elements(scope, all.as_slice());
 
                 // all set!
                 rv.set(all.into());
             },
-            |scope: &mut v8::HandleScope,
-             key: v8::Local<v8::Name>,
-             value: v8::Local<v8::Value>,
+            |_scope: &mut v8::HandleScope,
+             _key: v8::Local<v8::Name>,
+             _value: v8::Local<v8::Value>,
              _args: v8::PropertyCallbackArguments| {},
         );
     }

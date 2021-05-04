@@ -100,7 +100,7 @@ pub fn set_property<'s>(
 pub fn set_readonly_constant<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
-    name: &'static str,
+    name: &str,
     cvalue: v8::Local<v8::Value>,
 ) {
     let key = v8::String::new(scope, name).unwrap();
