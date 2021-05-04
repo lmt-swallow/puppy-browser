@@ -79,24 +79,6 @@ impl Node {
 
         v
     }
-
-    pub fn get_inline_scripts_recursively(&self) -> Vec<String> {
-        match self.node_type {
-            NodeType::Element(ref element) => match element.tag_name.as_str() {
-                "script" => return vec![self.inner_text()],
-                _ => (),
-            },
-            _ => (),
-        };
-
-        self.children
-            .iter()
-            .map(|node| node.get_inline_scripts_recursively())
-            .collect::<Vec<Vec<String>>>()
-            .into_iter()
-            .flatten()
-            .collect()
-    }
 }
 
 impl ToString for Node {

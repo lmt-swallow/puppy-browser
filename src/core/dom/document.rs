@@ -1,3 +1,5 @@
+use crate::core::dom::NodeType;
+
 use super::Node;
 
 /// `Document` interface.
@@ -21,6 +23,27 @@ impl Document {
             document_uri: document_uri,
             document_element: document_element,
         }
+    }
+
+    pub fn get_inline_scripts(&self) -> Vec<String> {
+        fn intl(node: &Box<Node>) -> Vec<String> {
+            match node.node_type {
+                NodeType::Element(ref element) => match element.tag_name.as_str() {
+                    "script" => return vec![node.inner_text()],
+                    _ => (),
+                },
+                _ => (),
+            };
+
+            node.children
+                .iter()
+                .map(|child| intl(child))
+                .collect::<Vec<Vec<String>>>()
+                .into_iter()
+                .flatten()
+                .collect()
+        }
+        intl(&self.document_element)
     }
 }
 

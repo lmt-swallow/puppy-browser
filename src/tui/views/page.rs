@@ -104,7 +104,7 @@ impl PageView {
                 None => return Err(PageError::NoDocumentError),
             };
             let document = document.borrow_mut();
-            document.document_element.get_inline_scripts_recursively()
+            document.get_inline_scripts()
         };
 
         for script in scripts {
