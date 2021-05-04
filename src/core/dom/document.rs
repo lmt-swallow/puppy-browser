@@ -4,6 +4,9 @@ use super::Node;
 /// Here is a list of major WebIDL definition related to the interface:
 /// - https://dom.spec.whatwg.org/#interface-document
 /// - https://html.spec.whatwg.org/multipage/dom.html#the-document-object
+///
+/// In the standard, `Document` interface inherits `Node` objects, indicating that it's one of the options to include the following `Document` struct in `super::NodeType`.
+/// However, if you do so, our implementation will be more complex. Thie is because the behaviour of `Document` and `Element` is much different!
 #[derive(Debug, PartialEq)]
 pub struct Document {
     pub url: String,
