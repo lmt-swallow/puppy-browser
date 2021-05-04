@@ -13,38 +13,6 @@ pub struct Node {
 pub enum NodeType {
     Element(super::element::Element),
     Text(super::chardata::Text),
-    Document(super::document::Document),
-}
-
-impl ToString for Node {
-    fn to_string(&self) -> String {
-        match self.node_type {
-            NodeType::Element(ref e) => {
-                let attrs = e
-                    .attributes
-                    .iter()
-                    .clone()
-                    .into_iter()
-                    .map(|(k, v)| {
-                        // TODO (security): do this securely! This might causes mXSS.
-                        format!("{}=\"{}\"", k, v)
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                let children = self
-                    .children
-                    .iter()
-                    .clone()
-                    .into_iter()
-                    .map(|node| node.inner_html())
-                    .collect::<Vec<_>>()
-                    .join("");
-                format!("<{} {}>{}</{}>", e.tag_name, attrs, children, e.tag_name)
-            }
-            NodeType::Text(ref t) => t.data.to_string(),
-            _ => "".to_string(),
-        }
-    }
 }
 
 impl Node {
@@ -115,61 +83,62 @@ impl Node {
         v
     }
 
-    pub fn document_element(&self) -> &Box<Self> {
-        match self.node_type {
-            NodeType::Document(ref _document) => {
-                assert_eq!(self.children.len(), 1);
-                self.children.get(0).unwrap()
-            }
-            _ => {
-                panic!("failed to extract documentElement");
-            }
-        }
-    }
-
-    pub fn document_element_mut(&mut self) -> &mut Box<Node> {
-        match self.node_type {
-            NodeType::Document(ref _document) => {
-                assert_eq!(self.children.len(), 1);
-                self.children.get_mut(0).unwrap()
-            }
-            _ => {
-                panic!("failed to extract documentElement");
-            }
-        }
-    }
-
+ 
     pub fn get_inline_scripts_recursively(&self) -> Vec<String> {
         match self.node_type {
-            NodeType::Document(ref _document) => self
-                .children
-                .iter()
-                .map(|node| node.get_inline_scripts_recursively())
-                .collect::<Vec<Vec<String>>>()
-                .into_iter()
-                .flatten()
-                .collect(),
             NodeType::Element(ref element) => match element.tag_name.as_str() {
-                "script" => vec![self.inner_text()],
-                _ => self
+                "script" => return vec![self.inner_text()],
+                _ => (),
+            },
+            _ => (),
+        };
+
+        self.children
+            .iter()
+            .map(|node| node.get_inline_scripts_recursively())
+            .collect::<Vec<Vec<String>>>()
+            .into_iter()
+            .flatten()
+            .collect()
+    }
+}
+
+impl ToString for Node {
+    fn to_string(&self) -> String {
+        match self.node_type {
+            NodeType::Element(ref e) => {
+                let attrs = e
+                    .attributes
+                    .iter()
+                    .clone()
+                    .into_iter()
+                    .map(|(k, v)| {
+                        // TODO (security): do this securely! This might causes mXSS.
+                        format!("{}=\"{}\"", k, v)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let children = self
                     .children
                     .iter()
-                    .map(|node| node.get_inline_scripts_recursively())
-                    .collect::<Vec<Vec<String>>>()
+                    .clone()
                     .into_iter()
-                    .flatten()
-                    .collect(),
-            },
-            _ => {
-                vec![]
+                    .map(|node| node.inner_html())
+                    .collect::<Vec<_>>()
+                    .join("");
+                format!("<{} {}>{}</{}>", e.tag_name, attrs, children, e.tag_name)
             }
+            NodeType::Text(ref t) => t.data.to_string(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dom::{AttrMap, Element};
+    use crate::{
+        core::dom::Text,
+        dom::{AttrMap, Element},
+    };
 
     #[test]
     fn test_append_child() {
@@ -180,5 +149,44 @@ mod tests {
 
         node.append_child(Element::new("p".to_string(), AttrMap::new(), vec![]));
         assert_eq!(node.children.len(), 2)
+    }
+
+    #[test]
+    fn test_inner_text() {
+        {
+            let node = Element::new(
+                "p".to_string(),
+                AttrMap::new(),
+                vec![Text::new("hello world".to_string())],
+            );
+            assert_eq!(node.inner_text(), "hello world".to_string());
+        }
+        {
+            let node = Element::new(
+                "div".to_string(),
+                AttrMap::new(),
+                vec![
+                    Text::new("hello world".to_string()),
+                    Element::new(
+                        "p".to_string(),
+                        AttrMap::new(),
+                        vec![
+                            Element::new(
+                                "p".to_string(),
+                                AttrMap::new(),
+                                vec![Text::new("1".to_string())],
+                            ),
+                            Element::new("p".to_string(), AttrMap::new(), vec![]),
+                            Element::new(
+                                "p".to_string(),
+                                AttrMap::new(),
+                                vec![Text::new("3".to_string())],
+                            ),
+                        ],
+                    ),
+                ],
+            );
+            assert_eq!(node.inner_text(), "hello world13".to_string());
+        }
     }
 }

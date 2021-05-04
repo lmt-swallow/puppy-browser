@@ -1,4 +1,4 @@
-use super::{DOMException, Node, NodeType};
+use super::Node;
 
 /// `Document` interface.
 /// Here is a list of major WebIDL definition related to the interface:
@@ -8,31 +8,22 @@ use super::{DOMException, Node, NodeType};
 pub struct Document {
     pub url: String,
     pub document_uri: String,
+    pub document_element: Box<Node>,
 }
 
 impl Document {
-    pub fn new(
-        url: String,
-        document_uri: String,
-        children: Vec<Box<Node>>,
-    ) -> Result<Box<Node>, DOMException> {
-        if children.len() != 1 {
-            Err(DOMException::InvalidDocumentElement)
-        } else {
-            Ok(Box::new(Node {
-                node_type: NodeType::Document(Document {
-                    url: url,
-                    document_uri: document_uri,
-                }),
-                children,
-            }))
+    pub fn new(url: String, document_uri: String, document_element: Box<Node>) -> Document {
+        Document {
+            url: url,
+            document_uri: document_uri,
+            document_element: document_element,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dom::{AttrMap, Document, Element, NodeType};
+    use crate::dom::{AttrMap, Document, Element};
 
     #[test]
     fn test_valid_new() {
@@ -40,35 +31,14 @@ mod tests {
         let document = Document::new(
             url.to_string(),
             url.to_string(),
-            vec![Element::new("p".to_string(), AttrMap::new(), vec![])],
+            Element::new("p".to_string(), AttrMap::new(), vec![]),
         );
-        assert!(document.is_ok());
 
-        let document = document.unwrap();
-        match document.node_type {
-            NodeType::Document(props) => {
-                assert_eq!(props.url, url.to_string());
-                assert_eq!(props.document_uri, url.to_string());
-            }
-            _ => {
-                assert!(false);
-            }
-        }
-    }
-
-    #[test]
-    fn test_invalid_new() {
-        let url = "http://example.com";
-        assert!(Document::new(
-            url.to_string(),
-            url.to_string(),
-            vec![
-                Element::new("p".to_string(), AttrMap::new(), vec![]),
-                Element::new("p".to_string(), AttrMap::new(), vec![]),
-            ],
-        )
-        .is_err());
-
-        assert!(Document::new(url.to_string(), url.to_string(), vec![],).is_err());
+        assert_eq!(document.url, url.to_string());
+        assert_eq!(document.document_uri, url.to_string());
+        assert_eq!(
+            document.document_element,
+            Element::new("p".to_string(), AttrMap::new(), vec![])
+        );
     }
 }

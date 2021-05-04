@@ -1,4 +1,9 @@
-use crate::{core::dom::Node, javascript::binding, tui::PageViewAPIHandler, window::Window};
+use crate::{
+    core::dom::{Document},
+    javascript::binding,
+    tui::PageViewAPIHandler,
+    window::Window,
+};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
@@ -8,7 +13,7 @@ pub struct JavaScriptRuntimeState {
 
     // TODO (enhancement): remove this by GothamState like Deno does.
     pub window: Option<Rc<RefCell<Window>>>,
-    pub document: Option<Rc<RefCell<Box<Node>>>>,
+    pub document: Option<Rc<RefCell<Document>>>,
     pub pv_api_handler: Option<Rc<PageViewAPIHandler>>,
 }
 
@@ -117,18 +122,18 @@ impl JavaScriptRuntime {
     // on `Document` object
     ////
 
-    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Box<Node>>>> {
+    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Document>>> {
         let state = Self::state(isolate);
         let state = state.borrow();
         state.document.clone()
     }
 
-    pub fn get_document(&mut self) -> Option<Rc<RefCell<Box<Node>>>> {
+    pub fn get_document(&mut self) -> Option<Rc<RefCell<Document>>> {
         Self::document(&self.v8_isolate)
     }
 
-    pub fn set_document(&mut self, node: Rc<RefCell<Box<Node>>>) {
-        self.get_state().borrow_mut().document = Some(node);
+    pub fn set_document(&mut self, document: Rc<RefCell<Document>>) {
+        self.get_state().borrow_mut().document = Some(document);
     }
 
     // on script execution
@@ -254,22 +259,19 @@ mod tests {
     fn setup_runtime(
         runtime: &mut JavaScriptRuntime,
     ) -> (
-        Rc<RefCell<Box<Node>>>,
+        Rc<RefCell<Document>>,
         Rc<RefCell<Window>>,
         Rc<PageViewAPIHandler>,
     ) {
-        let document = Rc::new(RefCell::new(
-            Document::new(
-                "http://example.com".to_string(),
-                "http://example.com".to_string(),
-                vec![Element::new(
-                    "p".to_string(),
-                    AttrMap::new(),
-                    vec![Text::new("hi".to_string())],
-                )],
-            )
-            .unwrap(),
-        ));
+        let document = Rc::new(RefCell::new(Document::new(
+            "http://example.com".to_string(),
+            "http://example.com".to_string(),
+            Element::new(
+                "p".to_string(),
+                AttrMap::new(),
+                vec![Text::new("hi".to_string())],
+            ),
+        )));
         runtime.set_document(document.clone());
 
         let window = Rc::new(RefCell::new(Window {

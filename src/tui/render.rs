@@ -49,7 +49,6 @@ impl<'a> From<LayoutBox<'a>> for ElementContainer {
                         None
                     }
                 }
-                _ => None,
             },
             _ => None,
         };

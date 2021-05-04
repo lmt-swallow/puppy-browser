@@ -2,8 +2,7 @@ use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cu
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    core::{layout::LayoutBox, style::StyledNode},
-    dom::{Node, NodeType},
+    core::{dom::Document, layout::LayoutBox, style::StyledNode},
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
     tui::{render::ElementContainer, PageViewAPIHandler},
     window::Window,
@@ -24,7 +23,7 @@ pub enum PageError {
 pub struct PageView {
     // on document shown in the page
     window: Option<Rc<RefCell<Window>>>,
-    document: Option<Rc<RefCell<Box<Node>>>>,
+    document: Option<Rc<RefCell<Document>>>,
 
     // on UI
     view: ElementContainer,
@@ -50,13 +49,7 @@ impl PageView {
     }
 
     /// This function prepares a new page with given document.
-    pub fn init_page(&mut self, document: Box<Node>) -> Result<(), PageError> {
-        // assert the argument is Document.
-        match document.node_type {
-            NodeType::Document(ref _document) => {}
-            _ => return Err(PageError::NoDocumentError),
-        };
-
+    pub fn init_page(&mut self, document: Document) -> Result<(), PageError> {
         // prepare `Window` object for the new page
         let window = Rc::new(RefCell::new(Window {
             name: "".to_string(),
@@ -91,7 +84,7 @@ impl PageView {
         let document = document.borrow_mut();
 
         // render document
-        let top_element = document.document_element();
+        let top_element = &document.document_element;
         let styled: &StyledNode = &top_element.into();
         let layout: LayoutBox = styled.into();
         self.view = layout.into();
@@ -111,7 +104,7 @@ impl PageView {
                 None => return Err(PageError::NoDocumentError),
             };
             let document = document.borrow_mut();
-            document.get_inline_scripts_recursively()
+            document.document_element.get_inline_scripts_recursively()
         };
 
         for script in scripts {

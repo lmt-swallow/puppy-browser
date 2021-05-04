@@ -119,7 +119,7 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
                 let mut document = document.borrow_mut();
 
                 // get all nodes
-                let document_element = document.document_element_mut();
+                let document_element = &mut document.document_element;
 
                 let mut f = |n: &mut Box<Node>| -> Option<v8::Local<v8::Value>> {
                     let (tag_name, attributes) = match n.node_type {
