@@ -41,11 +41,7 @@ impl BrowserView {
         self.view.add_child(
             NavigationView::new("".to_string())
                 .on_navigation(|s, to| {
-                    if with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to))
-                        .is_none()
-                    {
-                        error!("failed to initiate navigation");
-                    };
+                    with_current_browser_view(s, |b: &mut BrowserView| b.navigate_to(to));
                 })
                 .with_name(NAVBAR_VIEW_NAME),
         )
@@ -94,7 +90,16 @@ impl BrowserView {
         }
     }
 
-    pub fn navigate_to(&mut self, absolute_url: String) -> Result<(), Box<dyn Error>> {
+    pub fn navigate_to(&mut self, absolute_url: String) {
+        match self.navigate_to_intl(absolute_url) {
+            Err(e) => {
+                error!("failed to navigate; {}", e);
+            }
+            _ => {}
+        };
+    }
+
+    fn navigate_to_intl(&mut self, absolute_url: String) -> Result<(), Box<dyn Error>> {
         // change navigation content
         self.view
             .call_on_name(NAVBAR_VIEW_NAME, |view: &mut NavigationView| {

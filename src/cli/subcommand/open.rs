@@ -1,10 +1,6 @@
 use std::{env, rc::Rc};
 
-use crate::{
-    cli::CommonOpts,
-    tui::{logger, views},
-    util,
-};
+use crate::{cli::CommonOpts, tui::{BrowserView, init_menu, logger}, util};
 
 use structopt::StructOpt;
 
@@ -21,7 +17,7 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
 
     // set up base
     let mut siv = cursive::default();
-    views::init_menu(&mut siv);
+    init_menu(&mut siv);
 
     // set up logger
     if let Some(level) = common_opts.verbose.log_level() {
@@ -29,10 +25,8 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     }
 
     // prepare a window
-    let mut b = views::BrowserView::named(Rc::new(siv.cb_sink().clone()));
-    if b.get_mut().navigate_to(start_url).is_err() {
-        return 1;
-    };
+    let mut b = BrowserView::named(Rc::new(siv.cb_sink().clone()));
+    b.get_mut().navigate_to(start_url);
     siv.add_fullscreen_layer(b);
 
     // start event loop

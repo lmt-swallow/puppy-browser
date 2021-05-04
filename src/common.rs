@@ -1,6 +1,12 @@
 pub mod dom;
 pub use self::dom::*;
 
+pub mod style;
+pub use self::style::*;
+
+pub mod layout;
+pub use self::layout::*;
+
 pub mod fetch;
 pub use self::fetch::*;
 

@@ -6,11 +6,12 @@ use combine::{
     attempt,
     error::{StreamError, StringStreamError},
     many,
+    parser::char::{newline, space},
 };
 use combine::{between, many1, parser, sep_by, Parser, Stream};
 use combine::{choice, error::ParseError};
 use combine::{
-    parser::char::{char, letter, spaces},
+    parser::char::{char, letter},
     satisfy,
 };
 use thiserror::Error;
@@ -38,16 +39,14 @@ pub enum HTMLParseError {
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
-pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
+pub fn parse(response: Response) -> Result<Box<Node>, HTMLParseError> {
     // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
     // We should determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
-    let body = String::from_utf8(response.data).unwrap();
-
-    let nodes = nodes().parse(&body as &str);
+    let nodes = parse_without_normalziation(response.data);
     match nodes {
-        Ok((nodes, _)) => {
-            let child_nodes = if nodes.len() == 1 {
+        Ok(nodes) => {
+            let document_element_arr = if nodes.len() == 1 {
                 nodes
             } else {
                 vec![Element::new("html".to_string(), AttrMap::new(), nodes)]
@@ -55,18 +54,31 @@ pub fn parse(response: Response) -> Result<Node, HTMLParseError> {
             match Document::new(
                 response.url.to_string(),
                 response.url.to_string(),
-                child_nodes,
+                document_element_arr,
             ) {
                 Ok(document_node) => Ok(document_node),
                 Err(e) => Err(HTMLParseError::InvalidDocumentError(e)),
             }
         }
+        Err(e) => Err(e),
+    }
+}
+
+pub fn parse_without_normalziation(data: Vec<u8>) -> Result<Vec<Box<Node>>, HTMLParseError> {
+    // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
+    // We should determine character encoding as follows:
+    // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
+    let body = String::from_utf8(data).unwrap();
+
+    let nodes = nodes().parse(&body as &str);
+    match nodes {
+        Ok((nodes, _)) => Ok(nodes),
         Err(e) => Err(HTMLParseError::InvalidResourceError(e)),
     }
 }
 
 // `nodes_` (and `nodes`) tries to parse input as Element or Text.
-fn nodes_<Input>() -> impl Parser<Input, Output = Vec<Node>>
+fn nodes_<Input>() -> impl Parser<Input, Output = Vec<Box<Node>>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
@@ -75,7 +87,7 @@ where
 }
 
 /// `text` consumes input until `<` comes.
-fn text<Input>() -> impl Parser<Input, Output = Node>
+fn text<Input>() -> impl Parser<Input, Output = Box<Node>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
@@ -84,15 +96,15 @@ where
 }
 
 /// `element` consumes `<tag_name attr_name="attr_value" ...>(children)</tag_name>`.
-fn element<Input>() -> impl Parser<Input, Output = Node>
+fn element<Input>() -> impl Parser<Input, Output = Box<Node>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (open_tag(), nodes(), close_tag()).and_then(
-        |((open_tag_name, attributes), child_nodes, close_tag_name)| {
+        |((open_tag_name, attributes), children, close_tag_name)| {
             if open_tag_name == close_tag_name {
-                Ok(Element::new(open_tag_name, attributes, child_nodes))
+                Ok(Element::new(open_tag_name, attributes, children))
             } else {
                 Err(<Input::Error as combine::error::ParseError<
                     char,
@@ -113,8 +125,12 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let open_tag_name = many1::<String, _, _>(letter());
-    let open_tag_content =
-        (open_tag_name, spaces(), attributes()).map(|v: (String, _, AttrMap)| (v.0, v.2));
+    let open_tag_content = (
+        open_tag_name,
+        many::<String, _, _>(space().or(newline())),
+        attributes(),
+    )
+        .map(|v: (String, _, AttrMap)| (v.0, v.2));
     between(char('<'), char('>'), open_tag_content)
 }
 
@@ -140,9 +156,9 @@ where
     let attribute_value = between(char('"'), char('"'), attribute_inner_value);
     (
         attribute_name,
-        spaces(),
+        many::<String, _, _>(space().or(newline())),
         char('='),
-        spaces(),
+        many::<String, _, _>(space().or(newline())),
         attribute_value,
     )
         .map(|v| (v.0, v.4))
@@ -154,16 +170,18 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    sep_by::<Vec<(String, String)>, _, _, _>(attribute(), spaces()).map(
-        |attrs: Vec<(String, String)>| {
-            let m: AttrMap = attrs.into_iter().collect();
-            m
-        },
+    sep_by::<Vec<(String, String)>, _, _, _>(
+        attribute(),
+        many::<String, _, _>(space().or(newline())),
     )
+    .map(|attrs: Vec<(String, String)>| {
+        let m: AttrMap = attrs.into_iter().collect();
+        m
+    })
 }
 
 parser! {
-    fn nodes[Input]()(Input) -> Vec<Node>
+    fn nodes[Input]()(Input) -> Vec<Box<Node>>
     where [Input: Stream<Token = char>]
     {
         nodes_()
@@ -300,7 +318,7 @@ mod tests {
             data: "<p>Hello World</p>".as_bytes().to_vec(),
         };
         let got = parse(s);
-        let expected: Result<Node, HTMLParseError> = Ok(Document::new(
+        let expected = Ok(Document::new(
             Url::parse(url).unwrap().to_string(),
             Url::parse(url).unwrap().to_string(),
             vec![Element::new(
