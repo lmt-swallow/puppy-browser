@@ -1,6 +1,6 @@
 mod api;
 mod binding;
+mod runtime;
 mod v8_init;
 
-pub mod runtime;
 pub use self::runtime::*;
