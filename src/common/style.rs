@@ -38,7 +38,7 @@ impl<'a> StyledNode<'a> {
     }
 
     pub fn value(&self, name: &str) -> Option<&CSSValue> {
-        self.properties.get(name).map(|v| v.clone())
+        self.properties.get(name)
     }
 }
 
