@@ -3,7 +3,7 @@ use cursive::{traits::Boxable, View};
 use log::{error, info};
 
 use crate::{
-    common::dom::{element::Element, Node},
+    core::dom::{element::Element, Node},
     tui::{components::TextInputView, views::with_current_browser_view, BrowserView},
 };
 

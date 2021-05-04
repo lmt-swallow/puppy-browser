@@ -4,5 +4,5 @@ mod javascript;
 mod tui;
 mod util;
 
-mod common;
-use self::common::*;
+mod core;
+use self::core::*;

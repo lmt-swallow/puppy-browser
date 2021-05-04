@@ -1,7 +1,7 @@
 use cursive::View;
 
 use crate::{
-    common::dom::{element::Element, Node},
+    core::dom::{element::Element, Node},
     tui::{components::Link, views::with_current_browser_view, BrowserView},
 };
 

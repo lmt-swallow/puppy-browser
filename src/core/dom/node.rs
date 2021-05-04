@@ -1,6 +1,5 @@
+use super::super::html::parse_without_normalziation;
 use std::error::Error;
-
-use crate::common::html::parse_without_normalziation;
 
 // `Node` interface
 // definition: https://dom.spec.whatwg.org/#interface-node

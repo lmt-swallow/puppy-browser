@@ -2,7 +2,7 @@ use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cu
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    common::{layout::LayoutBox, StyledNode},
+    core::{layout::LayoutBox, style::StyledNode},
     dom::{Node, NodeType},
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
     tui::{render::ElementContainer, PageViewAPIHandler},

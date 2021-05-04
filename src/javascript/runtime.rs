@@ -1,4 +1,4 @@
-use crate::{common::dom::Node, javascript::binding, tui::PageViewAPIHandler, window::Window};
+use crate::{core::dom::Node, javascript::binding, tui::PageViewAPIHandler, window::Window};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
@@ -211,7 +211,7 @@ fn to_pretty_string(mut try_catch: v8::TryCatch<v8::HandleScope>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::dom::{
+    use crate::core::dom::{
         element::{AttrMap, Element},
         Document, Text,
     };

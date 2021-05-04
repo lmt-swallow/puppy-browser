@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use super::{set_accessor_to, set_constant_to, set_property_to};
 use crate::{
-    common::dom::{Node, NodeType},
+    core::dom::{Node, NodeType},
     javascript::{api::request_rerender, JavaScriptRuntime},
 };
 use log::error;

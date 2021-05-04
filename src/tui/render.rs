@@ -1,7 +1,7 @@
-use crate::common::{
+use crate::core::{
     dom::NodeType,
     layout::{BoxType, LayoutBox},
-    StyledNode,
+    style::StyledNode,
 };
 use cursive::{
     views::{LinearLayout, TextView},

@@ -1,6 +1,5 @@
-use crate::common::Display;
-
-use super::StyledNode;
+use super::style::Display;
+use super::style::StyledNode;
 
 #[derive(Debug)]
 pub struct LayoutBox<'a> {
