@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use crate::common::{html::parse_without_normalziation, CSSValue, PropertyMap, StyledNode};
+use crate::common::html::parse_without_normalziation;
 
 // `Node` interface
 // definition: https://dom.spec.whatwg.org/#interface-node
@@ -165,42 +165,6 @@ impl Node {
             _ => {
                 vec![]
             }
-        }
-    }
-}
-
-// TODO (enhancement): link with CSS here
-impl<'a> Into<StyledNode<'a>> for &'a Box<Node> {
-    fn into(self) -> StyledNode<'a> {
-        // prepare basic information of StyledNode
-        let mut props = PropertyMap::new();
-        let mut children = self.children.iter().map(|x| x.into()).collect();
-
-        // set default styles
-        match &self.node_type {
-            NodeType::Element(e) => match e.tag_name.as_str() {
-                "script" => {
-                    props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
-                }
-                "div" => {
-                    props.insert(
-                        "display".to_string(),
-                        CSSValue::Keyword("block".to_string()),
-                    );
-                }
-                "a" => {
-                    children = vec![];
-                }
-                _ => {}
-            },
-            _ => {}
-        };
-
-        // all set :-)
-        StyledNode {
-            node: self,
-            properties: props,
-            children: children,
         }
     }
 }

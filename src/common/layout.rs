@@ -1,3 +1,5 @@
+use crate::common::Display;
+
 use super::StyledNode;
 
 #[derive(Debug)]
@@ -32,5 +34,33 @@ impl<'a> LayoutBox<'a> {
                 self.children.last_mut().unwrap()
             }
         }
+    }
+}
+
+impl<'a> From<&'a StyledNode<'a>> for LayoutBox<'a> {
+    fn from(snode: &'a StyledNode<'a>) -> Self {
+        let box_type = match snode.display() {
+            Display::Block => BoxType::BlockNode(&snode),
+            Display::Inline => BoxType::InlineNode(&snode),
+            Display::None => BoxType::NoneNode(&snode),
+        };
+        let mut layout = LayoutBox {
+            box_type: box_type,
+            children: vec![],
+        };
+
+        for child in &snode.children {
+            match child.display() {
+                Display::Block => {
+                    layout.children.push(child.into());
+                }
+                Display::Inline => {
+                    layout.inline_container().children.push(child.into());
+                }
+                Display::None => {}
+            }
+        }
+
+        layout
     }
 }

@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use super::{
-    dom::Node,
-    layout::{BoxType, LayoutBox},
+    dom::{Node, NodeType},
 };
 // See: https://www.w3.org/TR/css-values-3/#component-types
 #[derive(Debug)]
@@ -42,30 +41,38 @@ impl<'a> StyledNode<'a> {
     }
 }
 
-impl<'a> Into<LayoutBox<'a>> for &'a StyledNode<'a> {
-    fn into(self) -> LayoutBox<'a> {
-        let box_type = match self.display() {
-            Display::Block => BoxType::BlockNode(&self),
-            Display::Inline => BoxType::InlineNode(&self),
-            Display::None => BoxType::NoneNode(&self),
-        };
-        let mut layout = LayoutBox {
-            box_type: box_type,
-            children: vec![],
+// TODO (enhancement): link with CSS here
+impl<'a> From<&'a Box<Node>> for StyledNode<'a> {
+    fn from(node: &'a Box<Node>) -> Self {
+        // prepare basic information of StyledNode
+        let mut props = PropertyMap::new();
+        let mut children = node.children.iter().map(|x| x.into()).collect();
+
+        // set default styles
+        match &node.node_type {
+            NodeType::Element(e) => match e.tag_name.as_str() {
+                "script" => {
+                    props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
+                }
+                "div" => {
+                    props.insert(
+                        "display".to_string(),
+                        CSSValue::Keyword("block".to_string()),
+                    );
+                }
+                "a" => {
+                    children = vec![];
+                }
+                _ => {}
+            },
+            _ => {}
         };
 
-        for node in &self.children {
-            match node.display() {
-                Display::Block => {
-                    layout.children.push(node.into());
-                }
-                Display::Inline => {
-                    layout.inline_container().children.push(node.into());
-                }
-                Display::None => {}
-            }
+        // all set :-)
+        StyledNode {
+            node,
+            properties: props,
+            children: children,
         }
-
-        layout
     }
 }

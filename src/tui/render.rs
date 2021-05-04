@@ -13,17 +13,17 @@ mod input;
 
 pub type ElementContainer = LinearLayout;
 
-impl<'a> Into<ElementContainer> for LayoutBox<'a> {
-    fn into(self) -> ElementContainer {
+impl<'a> From<LayoutBox<'a>> for ElementContainer {
+    fn from(layout: LayoutBox<'a>) -> Self {
         // render the children
-        let mut container = match self.box_type {
+        let mut container = match layout.box_type {
             BoxType::NoneNode(_) => {
                 return LinearLayout::horizontal();
             }
             BoxType::BlockNode(_) => LinearLayout::vertical(),
             BoxType::InlineNode(_) | BoxType::AnonymousBlock => LinearLayout::horizontal(),
         };
-        for child in self.children {
+        for child in layout.children {
             let e: ElementContainer = child.into();
             if e.len() != 0 {
                 container.add_child(e);
@@ -31,7 +31,7 @@ impl<'a> Into<ElementContainer> for LayoutBox<'a> {
         }
 
         // render the node of layout box
-        let element = match self.box_type {
+        let element = match layout.box_type {
             BoxType::BlockNode(&StyledNode { node, .. })
             | BoxType::InlineNode(&StyledNode { node, .. }) => match node.node_type {
                 NodeType::Element(ref element) => match element.tag_name.as_str() {
