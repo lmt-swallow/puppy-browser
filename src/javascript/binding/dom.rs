@@ -1,50 +1,12 @@
 use std::ffi::c_void;
 
-use super::{set_property, set_property_with_accessor, set_readonly_constant};
+use super::{set_accessor_to, set_constant_to, set_property_to};
 use crate::{
     common::dom::{Node, NodeType},
-    javascript::{binding::request_rerender, JavaScriptRuntime},
+    javascript::{api::request_rerender, JavaScriptRuntime},
 };
 use log::error;
 use rusty_v8 as v8;
-
-type NodeRefTarget<'a> = &'a mut Box<Node>;
-
-fn set_node_internal_ref<'s>(
-    scope: &mut v8::HandleScope<'s>,
-    node_rust: NodeRefTarget,
-    node_v8: v8::Local<v8::Object>,
-) {
-    let boxed_ref = Box::new(node_rust);
-    let addr = Box::leak(boxed_ref) as *mut NodeRefTarget as *mut c_void;
-    let v8_ext = v8::External::new(scope, addr);
-    let target_node_ref_v8: v8::Local<v8::Value> = v8_ext.into();
-    node_v8.set_internal_field(0, target_node_ref_v8);
-}
-
-fn to_linked_rust_node<'s>(
-    scope: &mut v8::HandleScope<'s>,
-    node_v8: v8::Local<v8::Object>,
-) -> &'s mut NodeRefTarget<'s> {
-    let node_v8 = node_v8.get_internal_field(scope, 0).unwrap();
-    let node = unsafe { v8::Local::<v8::External>::cast(node_v8) };
-    let node = node.value() as *mut NodeRefTarget;
-    unsafe { &mut *node }
-}
-
-fn to_v8_node<'s>(
-    scope: &mut v8::HandleScope<'s>,
-    node_rust: &mut Box<Node>,
-) -> v8::Local<'s, v8::Object> {
-    // create new node instance
-    let node_v8 = create_v8_node(scope);
-
-    // set a reference to Node into the internal field
-    set_node_internal_ref(scope, node_rust, node_v8);
-
-    // all set :-)
-    node_v8
-}
 
 /// This function creates a new `Node` object.
 ///
@@ -81,13 +43,13 @@ fn to_v8_element<'s>(
     {
         // add `tagName` property
         let tag_name = v8::String::new(scope, tag_name).unwrap();
-        set_readonly_constant(scope, node, "tagName", tag_name.into());
+        set_constant_to(scope, node, "tagName", tag_name.into());
     }
     {
         // set attributes as properties
         for (key, value) in attributes {
             let value = v8::String::new(scope, value.as_str()).unwrap();
-            set_readonly_constant(scope, node, key.as_str(), value.into());
+            set_constant_to(scope, node, key.as_str(), value.into());
         }
     }
     {
@@ -95,7 +57,7 @@ fn to_v8_element<'s>(
         // TODO (security): the setter might cause dangling pointer from v8 to rust's heap.
         // This is because objects returned by `document.all` have pointers to rust's heap their own internal fields,
         // and they will be alive after setting values to (any node).`innerHTML` and some node are deleted from the heap.
-        set_property_with_accessor(
+        set_accessor_to(
             scope,
             node,
             "innerHTML",
@@ -138,7 +100,7 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
     {
         // add `all` property (too old though!)
         // standard: https://dom.spec.whatwg.org/#dom-document-createelement
-        set_property_with_accessor(
+        set_accessor_to(
             scope,
             document,
             "all",
@@ -184,10 +146,52 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
     document
 }
 
+/// This function sets `document` object into `global`.
 pub fn initialize_dom<'s>(
     scope: &mut v8::ContextScope<'s, v8::EscapableHandleScope>,
     global: v8::Local<v8::Object>,
 ) {
     let document = create_document_object(scope);
-    set_property(scope, global, "document", document.into());
+    set_property_to(scope, global, "document", document.into());
+}
+
+// utilities
+// =========
+
+type NodeRefTarget<'a> = &'a mut Box<Node>;
+
+fn set_node_internal_ref<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    node_rust: NodeRefTarget,
+    node_v8: v8::Local<v8::Object>,
+) {
+    let boxed_ref = Box::new(node_rust);
+    let addr = Box::leak(boxed_ref) as *mut NodeRefTarget as *mut c_void;
+    let v8_ext = v8::External::new(scope, addr);
+    let target_node_ref_v8: v8::Local<v8::Value> = v8_ext.into();
+    node_v8.set_internal_field(0, target_node_ref_v8);
+}
+
+fn to_linked_rust_node<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    node_v8: v8::Local<v8::Object>,
+) -> &'s mut NodeRefTarget<'s> {
+    let node_v8 = node_v8.get_internal_field(scope, 0).unwrap();
+    let node = unsafe { v8::Local::<v8::External>::cast(node_v8) };
+    let node = node.value() as *mut NodeRefTarget;
+    unsafe { &mut *node }
+}
+
+fn to_v8_node<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    node_rust: &mut Box<Node>,
+) -> v8::Local<'s, v8::Object> {
+    // create new node instance
+    let node_v8 = create_v8_node(scope);
+
+    // set a reference to Node into the internal field
+    set_node_internal_ref(scope, node_rust, node_v8);
+
+    // all set :-)
+    node_v8
 }

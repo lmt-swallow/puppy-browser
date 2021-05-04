@@ -92,7 +92,6 @@ impl Node {
     {
         let mut v: Vec<T> = vec![];
 
-        // v.push(f(self));
         for child in &mut self.children {
             v.push(f(child));
             v.extend(child.children_map(f));
