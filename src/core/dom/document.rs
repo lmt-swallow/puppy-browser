@@ -25,25 +25,31 @@ impl Document {
         }
     }
 
-    pub fn get_inline_scripts(&self) -> Vec<String> {
-        fn intl(node: &Box<Node>) -> Vec<String> {
-            match node.node_type {
-                NodeType::Element(ref element) => match element.tag_name.as_str() {
-                    "script" => return vec![node.inner_text()],
-                    _ => (),
-                },
-                _ => (),
-            };
+    pub fn collect_tag_inners(&self, tag_name: &str) -> Vec<String> {
+        fn intl(node: &Box<Node>, tag_name: &str) -> Vec<String> {
+            if let NodeType::Element(ref element) = node.node_type {
+                if element.tag_name.as_str() == tag_name {
+                    return vec![node.inner_text()];
+                }
+            }
 
             node.children
                 .iter()
-                .map(|child| intl(child))
+                .map(|child| intl(child, tag_name))
                 .collect::<Vec<Vec<String>>>()
                 .into_iter()
                 .flatten()
                 .collect()
         }
-        intl(&self.document_element)
+        intl(&self.document_element, tag_name)
+    }
+
+    pub fn get_script_inners(&self) -> Vec<String> {
+        self.collect_tag_inners("script")
+    }
+
+    pub fn get_style_inners(&self) -> Vec<String> {
+        self.collect_tag_inners("style")
     }
 }
 

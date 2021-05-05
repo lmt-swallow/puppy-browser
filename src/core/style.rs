@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::{
     css::CSSValue,
-    dom::{Node, NodeType},
+    dom::{Document, Node, NodeType},
 };
 
 pub type PropertyMap = HashMap<String, CSSValue>;
@@ -57,7 +57,6 @@ impl<'a> StyledNode<'a> {
     }
 }
 
-// TODO (enhancement): link with CSS here
 impl<'a> From<&'a Box<Node>> for StyledNode<'a> {
     fn from(node: &'a Box<Node>) -> Self {
         // prepare basic information of StyledNode
@@ -90,6 +89,13 @@ impl<'a> From<&'a Box<Node>> for StyledNode<'a> {
             properties: props,
             children: children,
         }
+    }
+}
+
+impl<'a> From<&'a Document> for StyledNode<'a> {
+    fn from(document: &'a Document) -> Self {
+        let top_element = &document.document_element;
+        top_element.into()
     }
 }
 

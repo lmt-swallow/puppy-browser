@@ -81,11 +81,10 @@ impl PageView {
             Some(w) => w,
             None => return Err(PageError::NoDocumentError),
         };
-        let document = document.borrow_mut();
+        let document = &*document.borrow_mut();
 
         // render document
-        let top_element = &document.document_element;
-        let styled: &StyledNode = &top_element.into();
+        let styled: &StyledNode = &document.into();
         let layout: LayoutBox = styled.into();
         self.view = layout.into();
 
@@ -104,7 +103,7 @@ impl PageView {
                 None => return Err(PageError::NoDocumentError),
             };
             let document = document.borrow_mut();
-            document.get_inline_scripts()
+            document.get_script_inners()
         };
 
         for script in scripts {
