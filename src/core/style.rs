@@ -1,13 +1,9 @@
 use std::collections::HashMap;
 
-use super::dom::{Node, NodeType};
-/// `CSSValue` represents some of component value types.
-/// See the following to check the definition of component value types:
-/// - https://www.w3.org/TR/css-values-3/#component-types
-#[derive(Debug, PartialEq)]
-pub enum CSSValue {
-    Keyword(String),
-}
+use super::{
+    css::CSSValue,
+    dom::{Node, NodeType},
+};
 
 pub type PropertyMap = HashMap<String, CSSValue>;
 

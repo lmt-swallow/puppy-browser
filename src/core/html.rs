@@ -36,6 +36,7 @@ pub enum HTMLParseError {
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
+/// This functions parses `response` as HTML in non-standard manner.
 pub fn parse(response: Response) -> Result<Document, HTMLParseError> {
     // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
     // We should determine character encoding as follows:
@@ -64,11 +65,10 @@ pub fn parse_without_normalziation(data: Vec<u8>) -> Result<Vec<Box<Node>>, HTML
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
     let body = String::from_utf8(data).unwrap();
 
-    let nodes = nodes().parse(&body as &str);
-    match nodes {
-        Ok((nodes, _)) => Ok(nodes),
-        Err(e) => Err(HTMLParseError::InvalidResourceError(e)),
-    }
+    nodes()
+        .parse(&body as &str)
+        .map(|(nodes, _)| nodes)
+        .map_err(|e| HTMLParseError::InvalidResourceError(e))
 }
 
 // `nodes_` (and `nodes`) tries to parse input as Element or Text.
