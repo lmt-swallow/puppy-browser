@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use super::{set_accessor_to, set_constant_to, set_property_to};
+use super::{set_accessor_to, set_constant_to, set_function_to, set_property_to};
 use crate::{
     core::dom::{Node, NodeType},
     javascript::{api::request_rerender, JavaScriptRuntime},
@@ -129,20 +129,6 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
                     Some(to_v8_element(scope, tag_name.as_str(), attributes, n).into())
                 };
 
-                fn map_mut<T, F>(node: NodeRefTarget, f: &mut F) -> Vec<T>
-                where
-                    F: FnMut(&mut Box<Node>) -> T,
-                {
-                    let mut v: Vec<T> = vec![];
-
-                    for child in &mut node.children {
-                        v.push(f(child));
-                        v.extend(map_mut(child, f));
-                    }
-
-                    v.push(f(node));
-                    v
-                }
                 let all: Vec<v8::Local<v8::Value>> = map_mut(document_element, &mut f)
                     .into_iter()
                     .filter_map(|n| n)
@@ -156,6 +142,57 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
              _key: v8::Local<v8::Name>,
              _value: v8::Local<v8::Value>,
              _args: v8::PropertyCallbackArguments| {},
+        );
+    }
+    {
+        // `getElementById` property
+        set_function_to(
+            scope,
+            document,
+            "getElementById",
+            |scope: &mut v8::HandleScope,
+             args: v8::FunctionCallbackArguments,
+             mut retval: v8::ReturnValue| {
+                let id = args
+                    .get(0)
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope);
+                // get puppy's document object
+                let document = match JavaScriptRuntime::document(scope) {
+                    Some(_document) => _document,
+                    None => {
+                        error!("failed to get document reference; document is None");
+                        return;
+                    }
+                };
+                let mut document = document.borrow_mut();
+
+                // get all nodes
+                let document_element = &mut document.document_element;
+
+                let mut f = |n: &mut Box<Node>| -> Option<v8::Local<v8::Value>> {
+                    let (tag_name, attributes) = match n.node_type {
+                        NodeType::Element(ref e) => {
+                            if e.id().map(|eid| eid.to_string() == id).unwrap_or(false) {
+                                (e.tag_name.clone(), e.attributes())
+                            } else {
+                                return None;
+                            }
+                        }
+                        _ => return None,
+                    };
+                    Some(to_v8_element(scope, tag_name.as_str(), attributes, n).into())
+                };
+
+                let element: v8::Local<v8::Value> = map_mut(document_element, &mut f)
+                    .into_iter()
+                    .find_map(|n| n)
+                    .unwrap_or(v8::undefined(scope).into());
+
+                // all set!
+                retval.set(element.into());
+            },
         );
     }
 
@@ -210,4 +247,19 @@ fn to_v8_node<'s>(
 
     // all set :-)
     node_v8
+}
+
+fn map_mut<T, F>(node: NodeRefTarget, f: &mut F) -> Vec<T>
+where
+    F: FnMut(&mut Box<Node>) -> T,
+{
+    let mut v: Vec<T> = vec![];
+
+    for child in &mut node.children {
+        v.push(f(child));
+        v.extend(map_mut(child, f));
+    }
+
+    v.push(f(node));
+    v
 }
