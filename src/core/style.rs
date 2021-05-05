@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
-use log::info;
-
 use super::{
     css::{self, CSSValue, Stylesheet},
     dom::{Document, Node, NodeType},
 };
+use std::collections::HashMap;
 
 pub type PropertyMap = HashMap<String, CSSValue>;
 
@@ -63,10 +60,7 @@ impl<'a> From<&'a Document> for StyledNode<'a> {
     fn from(document: &'a Document) -> Self {
         // TODO (enhancement): better error handling
         let styles = document.get_style_inners().join("\n");
-        info!("{:?}", styles);
-        let stylesheet = css::parse(styles);
-        info!("{:?}", stylesheet);
-        let stylesheet = stylesheet.unwrap_or(Stylesheet::new(vec![]));
+        let stylesheet = css::parse(styles).unwrap_or(Stylesheet::new(vec![]));
         to_styled_node(&document.document_element, &stylesheet)
     }
 }
@@ -74,37 +68,22 @@ impl<'a> From<&'a Document> for StyledNode<'a> {
 fn to_styled_node<'a>(node: &'a Box<Node>, stylesheet: &Stylesheet) -> StyledNode<'a> {
     // prepare basic information of StyledNode
     let mut props = PropertyMap::new();
-    let children = node
-        .children
-        .iter()
-        .map(|x| to_styled_node(x, stylesheet))
-        .collect();
+    let children = match &node.node_type {
+        NodeType::Element(e) => match e.tag_name.as_str() {
+            "a" => {
+                vec![]
+            }
+            _ => to_styled_nodes(&node.children, stylesheet),
+        },
+        _ => to_styled_nodes(&node.children, stylesheet),
+    };
 
+    // match CSS rules
     for matched_rule in stylesheet.rules.iter().filter(|r| r.matches(node)) {
         for declaration in &matched_rule.declarations {
             props.insert(declaration.name.clone(), declaration.value.clone());
         }
     }
-
-    // // set default styles
-    // match &node.node_type {
-    //     NodeType::Element(e) => match e.tag_name.as_str() {
-    //         "script" => {
-    //             props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
-    //         }
-    //         "div" => {
-    //             props.insert(
-    //                 "display".to_string(),
-    //                 CSSValue::Keyword("block".to_string()),
-    //             );
-    //         }
-    //         "a" => {
-    //             children = vec![];
-    //         }
-    //         _ => {}
-    //     },
-    //     _ => {}
-    // };
 
     // all set :-)
     StyledNode {
@@ -112,6 +91,13 @@ fn to_styled_node<'a>(node: &'a Box<Node>, stylesheet: &Stylesheet) -> StyledNod
         properties: props,
         children: children,
     }
+}
+
+fn to_styled_nodes<'a>(nodes: &'a Vec<Box<Node>>, stylesheet: &Stylesheet) -> Vec<StyledNode<'a>> {
+    nodes
+        .iter()
+        .map(|x| to_styled_node(x, stylesheet))
+        .collect()
 }
 
 #[cfg(test)]
