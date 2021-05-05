@@ -35,7 +35,7 @@ fn to_v8_element<'s>(
     scope: &mut v8::HandleScope<'s>,
     tag_name: &str,
     attributes: Vec<(String, String)>,
-    node_rust: &mut Box<Node>,
+    node_rust: NodeRefTarget,
 ) -> v8::Local<'s, v8::Object> {
     let node = to_v8_node(scope, node_rust);
 
@@ -128,9 +128,25 @@ fn create_document_object<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, 
                     };
                     Some(to_v8_element(scope, tag_name.as_str(), attributes, n).into())
                 };
-                let mut all: Vec<v8::Local<v8::Value>> =
-                    document_element.children_filter_map(&mut f);
-                all.insert(0, f(document_element).unwrap());
+
+                fn map_mut<T, F>(node: NodeRefTarget, f: &mut F) -> Vec<T>
+                where
+                    F: FnMut(&mut Box<Node>) -> T,
+                {
+                    let mut v: Vec<T> = vec![];
+
+                    for child in &mut node.children {
+                        v.push(f(child));
+                        v.extend(map_mut(child, f));
+                    }
+
+                    v.push(f(node));
+                    v
+                }
+                let all: Vec<v8::Local<v8::Value>> = map_mut(document_element, &mut f)
+                    .into_iter()
+                    .filter_map(|n| n)
+                    .collect();
                 let all = v8::Array::new_with_elements(scope, all.as_slice());
 
                 // all set!
@@ -184,7 +200,7 @@ fn to_linked_rust_node<'s>(
 
 fn to_v8_node<'s>(
     scope: &mut v8::HandleScope<'s>,
-    node_rust: &mut Box<Node>,
+    node_rust: NodeRefTarget,
 ) -> v8::Local<'s, v8::Object> {
     // create new node instance
     let node_v8 = create_v8_node(scope);

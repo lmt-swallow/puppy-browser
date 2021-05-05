@@ -49,36 +49,6 @@ impl Node {
         self.children = node;
         Ok(())
     }
-
-    pub fn children_map<T, F>(&mut self, f: &mut F) -> Vec<T>
-    where
-        F: FnMut(&mut Box<Node>) -> T,
-    {
-        let mut v: Vec<T> = vec![];
-
-        for child in &mut self.children {
-            v.push(f(child));
-            v.extend(child.children_map(f));
-        }
-
-        v
-    }
-
-    pub fn children_filter_map<T, F>(&mut self, f: &mut F) -> Vec<T>
-    where
-        F: FnMut(&mut Box<Node>) -> Option<T>,
-    {
-        let mut v: Vec<T> = vec![];
-
-        for child in &mut self.children {
-            if let Some(r) = f(child) {
-                v.push(r);
-            }
-            v.extend(child.children_filter_map(f));
-        }
-
-        v
-    }
 }
 
 impl ToString for Node {
