@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use log::info;
+
 use super::{
-    css::CSSValue,
+    css::{self, CSSValue, Stylesheet},
     dom::{Document, Node, NodeType},
 };
 
@@ -57,59 +59,73 @@ impl<'a> StyledNode<'a> {
     }
 }
 
-impl<'a> From<&'a Box<Node>> for StyledNode<'a> {
-    fn from(node: &'a Box<Node>) -> Self {
-        // prepare basic information of StyledNode
-        let mut props = PropertyMap::new();
-        let mut children = node.children.iter().map(|x| x.into()).collect();
-
-        // set default styles
-        match &node.node_type {
-            NodeType::Element(e) => match e.tag_name.as_str() {
-                "script" => {
-                    props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
-                }
-                "div" => {
-                    props.insert(
-                        "display".to_string(),
-                        CSSValue::Keyword("block".to_string()),
-                    );
-                }
-                "a" => {
-                    children = vec![];
-                }
-                _ => {}
-            },
-            _ => {}
-        };
-
-        // all set :-)
-        StyledNode {
-            node_type: &node.node_type,
-            properties: props,
-            children: children,
-        }
+impl<'a> From<&'a Document> for StyledNode<'a> {
+    fn from(document: &'a Document) -> Self {
+        // TODO (enhancement): better error handling
+        let styles = document.get_style_inners().join("\n");
+        info!("{:?}", styles);
+        let stylesheet = css::parse(styles);
+        info!("{:?}", stylesheet);
+        let stylesheet = stylesheet.unwrap_or(Stylesheet::new(vec![]));
+        to_styled_node(&document.document_element, &stylesheet)
     }
 }
 
-impl<'a> From<&'a Document> for StyledNode<'a> {
-    fn from(document: &'a Document) -> Self {
-        let top_element = &document.document_element;
-        top_element.into()
+fn to_styled_node<'a>(node: &'a Box<Node>, stylesheet: &Stylesheet) -> StyledNode<'a> {
+    // prepare basic information of StyledNode
+    let mut props = PropertyMap::new();
+    let children = node
+        .children
+        .iter()
+        .map(|x| to_styled_node(x, stylesheet))
+        .collect();
+
+    for matched_rule in stylesheet.rules.iter().filter(|r| r.matches(node)) {
+        for declaration in &matched_rule.declarations {
+            props.insert(declaration.name.clone(), declaration.value.clone());
+        }
+    }
+
+    // // set default styles
+    // match &node.node_type {
+    //     NodeType::Element(e) => match e.tag_name.as_str() {
+    //         "script" => {
+    //             props.insert("display".to_string(), CSSValue::Keyword("none".to_string()));
+    //         }
+    //         "div" => {
+    //             props.insert(
+    //                 "display".to_string(),
+    //                 CSSValue::Keyword("block".to_string()),
+    //             );
+    //         }
+    //         "a" => {
+    //             children = vec![];
+    //         }
+    //         _ => {}
+    //     },
+    //     _ => {}
+    // };
+
+    // all set :-)
+    StyledNode {
+        node_type: &node.node_type,
+        properties: props,
+        children: children,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::core::{
+        css::Stylesheet,
         dom::{AttrMap, Element},
-        style::{CSSValue, Display, StyledNode},
+        style::{to_styled_node, CSSValue, Display, StyledNode},
     };
 
     #[test]
     fn test_properties() {
         let e = &Element::new("p".to_string(), AttrMap::new(), vec![]);
-        let mut styled_e: StyledNode<'_> = e.into();
+        let mut styled_e: StyledNode<'_> = to_styled_node(e, &Stylesheet::new(vec![]));
         assert_eq!(
             styled_e.set_style_property("display", CSSValue::Keyword("block".to_string())),
             None
@@ -127,7 +143,7 @@ mod tests {
     #[test]
     fn test_display() {
         let e = &Element::new("p".to_string(), AttrMap::new(), vec![]);
-        let mut styled_e: StyledNode<'_> = e.into();
+        let mut styled_e: StyledNode<'_> = to_styled_node(e, &Stylesheet::new(vec![]));
 
         styled_e.set_style_property("display", CSSValue::Keyword("block".to_string()));
         assert_eq!(styled_e.display(), Display::Block);

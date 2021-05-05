@@ -1,11 +1,10 @@
-use super::fetch::Response;
-
+use super::dom::{Node, NodeType};
 use combine::{
     choice,
     error::StreamError,
     error::StringStreamError,
     many, many1, optional,
-    parser::char::{self, letter, spaces},
+    parser::char::{self, letter, newline, space},
     sep_by, sep_end_by, ParseError, Parser, Stream,
 };
 use thiserror::Error;
@@ -14,7 +13,13 @@ use thiserror::Error;
 /// It consists of multiple rules, which are called "rule-list" in the standard (https://www.w3.org/TR/css-syntax-3/).
 #[derive(Debug, PartialEq)]
 pub struct Stylesheet {
-    rules: Vec<Rule>,
+    pub rules: Vec<Rule>,
+}
+
+impl Stylesheet {
+    pub fn new(rules: Vec<Rule>) -> Self {
+        Stylesheet { rules: rules }
+    }
 }
 
 /// `Rule` represents a single CSS rule.
@@ -22,8 +27,14 @@ pub struct Stylesheet {
 /// - *qualified rule* such as `h1 { .... }`. it is defined at https://www.w3.org/TR/css-syntax-3/#qualified-rule
 #[derive(Debug, PartialEq)]
 pub struct Rule {
-    selectors: Vec<Selector>,
-    declarations: Vec<Declaration>,
+    pub selectors: Vec<Selector>,
+    pub declarations: Vec<Declaration>,
+}
+
+impl Rule {
+    pub fn matches(&self, n: &Box<Node>) -> bool {
+        self.selectors.iter().any(|s| s.matches(n))
+    }
 }
 
 /// `Selector` represents a sequence of simple selectors separated by combinators.
@@ -52,6 +63,42 @@ pub enum SimpleSelector {
     // TODO (enhancement): support more attribute selectors
 }
 
+impl SimpleSelector {
+    pub fn matches(&self, n: &Box<Node>) -> bool {
+        match self {
+            SimpleSelector::UniversalSelector => true,
+            SimpleSelector::TypeSelector { tag_name } => match n.node_type {
+                NodeType::Element(ref e) => e.tag_name.as_str() == tag_name,
+                _ => false,
+            },
+            SimpleSelector::AttributeSelector {
+                tag_name,
+                op,
+                attribute,
+                value,
+            } => match n.node_type {
+                NodeType::Element(ref e) => {
+                    e.tag_name.as_str() == tag_name
+                        && match op {
+                            AttributeSelectorOp::Eq => e.attributes.get(attribute) == Some(value),
+                            AttributeSelectorOp::Contain => e
+                                .attributes
+                                .get(attribute)
+                                .map(|value| {
+                                    value
+                                        .split_ascii_whitespace()
+                                        .find(|v| v == value)
+                                        .is_some()
+                                })
+                                .unwrap_or(false),
+                        }
+                }
+                _ => false,
+            },
+        }
+    }
+}
+
 /// `AttributeSelectorOp` is an operator which is allowed to use.
 /// See https://www.w3.org/TR/selectors-3/#attribute-selectors to check the full list of available operators.
 #[derive(Debug, PartialEq)]
@@ -71,21 +118,21 @@ pub enum AttributeSelectorOp {
 /// For simplicity, we handle two types of declarations together.
 #[derive(Debug, PartialEq)]
 pub struct Declaration {
-    name: String,
-    value: CSSValue,
+    pub name: String,
+    pub value: CSSValue,
     // TODO (enhancement): add a field for `!important`
 }
 
 /// `CSSValue` represents some of component value types.
 /// See the following to check the definition of component value types:
 /// - https://www.w3.org/TR/css-values-3/#component-types
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CSSValue {
     Keyword(String),
     Length((usize, Unit)),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Unit {
     Em,
     // TODO (enhancement): add more units here from https://www.w3.org/TR/css-values-3/#lengths
@@ -107,21 +154,27 @@ pub enum CSSParseError {
 // The latter one, tree construction stage, constructs a DOM while handling scripts inside <script> tags.
 
 // This functions parses `response` as CSS in non-standard manner.
-pub fn parse(response: Response) -> Result<Stylesheet, CSSParseError> {
-    let raw = String::from_utf8(response.data).unwrap();
-    let result = rules().parse(raw.as_str());
-    result
-        .map(|(stylesheet, _)| Stylesheet { rules: stylesheet })
+pub fn parse(raw: String) -> Result<Stylesheet, CSSParseError> {
+    rules()
+        .parse(raw.as_str())
+        .map(|(rules, _)| Stylesheet::new(rules))
         .map_err(|e| CSSParseError::InvalidResourceError(e))
 }
 
-// `rules_` (and `rules`) tries to parse input as Element or Text.
+fn whitespaces<Input>() -> impl Parser<Input, Output = String>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    many::<String, _, _>(space().or(newline()))
+}
+
 fn rules<Input>() -> impl Parser<Input, Output = Vec<Rule>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    many(rule())
+    (whitespaces(), many(rule().skip(whitespaces()))).map(|(_, rules)| rules)
 }
 
 fn rule<Input>() -> impl Parser<Input, Output = Rule>
@@ -130,9 +183,9 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (
-        selectors().skip(spaces()),
-        char::char('{').skip(spaces()),
-        declarations().skip(spaces()),
+        selectors().skip(whitespaces()),
+        char::char('{').skip(whitespaces()),
+        declarations().skip(whitespaces()),
         char::char('}'),
     )
         .map(|(selectors, _, declarations, _)| Rule {
@@ -146,7 +199,10 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    sep_by(selector().skip(spaces()), char::char(',').skip(spaces()))
+    sep_by(
+        selector().skip(whitespaces()),
+        char::char(',').skip(whitespaces()),
+    )
 }
 
 fn selector<Input>() -> impl Parser<Input, Output = Selector>
@@ -164,9 +220,9 @@ where
 {
     let universal_selector = char::char('*').map(|_| SimpleSelector::UniversalSelector);
     let type_or_attribute_selector = (
-        many1(letter()).skip(spaces()),
+        many1(letter()).skip(whitespaces()),
         optional((
-            char::char('[').skip(spaces()),
+            char::char('[').skip(whitespaces()),
             many1(letter()),
             choice((char::string("="), char::string("~="))),
             many1(letter()),
@@ -206,7 +262,10 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    sep_end_by(declaration().skip(spaces()), char::char(';').skip(spaces()))
+    sep_end_by(
+        declaration().skip(whitespaces()),
+        char::char(';').skip(whitespaces()),
+    )
 }
 
 fn declaration<Input>() -> impl Parser<Input, Output = Declaration>
@@ -215,8 +274,8 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (
-        many1(letter()).skip(spaces()),
-        char::char(':').skip(spaces()),
+        many1(letter()).skip(whitespaces()),
+        char::char(':').skip(whitespaces()),
         css_value(),
     )
         .map(|(k, _, v)| Declaration { name: k, value: v })
@@ -239,6 +298,42 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_stylesheet() {
+        assert_eq!(
+            parse("test [foo=bar] { aa: bb; cc: 1em } rule { ee: dd;  }".to_string()),
+            Ok(Stylesheet::new(vec![
+                Rule {
+                    selectors: vec![SimpleSelector::AttributeSelector {
+                        tag_name: "test".to_string(),
+                        attribute: "foo".to_string(),
+                        op: AttributeSelectorOp::Eq,
+                        value: "bar".to_string()
+                    }],
+                    declarations: vec![
+                        Declaration {
+                            name: "aa".to_string(),
+                            value: CSSValue::Keyword("bb".to_string())
+                        },
+                        Declaration {
+                            name: "cc".to_string(),
+                            value: CSSValue::Length((1, Unit::Em)),
+                        }
+                    ]
+                },
+                Rule {
+                    selectors: vec![SimpleSelector::TypeSelector {
+                        tag_name: "rule".to_string(),
+                    }],
+                    declarations: vec![Declaration {
+                        name: "ee".to_string(),
+                        value: CSSValue::Keyword("dd".to_string())
+                    }]
+                },
+            ]))
+        );
+    }
 
     #[test]
     fn test_rule() {
