@@ -13,6 +13,22 @@ pub enum Display {
     None,
 }
 
+/// `StyledDocument` wraps `Document` with related CSS properties.
+#[derive(Debug)]
+pub struct StyledDocument<'a> {
+    pub document_element: StyledNode<'a>,
+}
+
+pub fn to_styled_document<'a>(document: &'a Document) -> StyledDocument<'a> {
+    let styles = document.get_style_inners().join("\n");
+    let stylesheet = css::parse(styles).unwrap_or(Stylesheet::new(vec![]));
+    let document_element = to_styled_node(&document.document_element, &stylesheet);
+
+    StyledDocument {
+        document_element: document_element,
+    }
+}
+
 /// `StyledNode` wraps `Node` with related CSS properties.
 /// It forms a tree as `Node` does.
 #[derive(Debug)]
@@ -56,15 +72,6 @@ impl<'a> StyledNode<'a> {
     }
 }
 
-impl<'a> From<&'a Document> for StyledNode<'a> {
-    fn from(document: &'a Document) -> Self {
-        // TODO (enhancement): better error handling
-        let styles = document.get_style_inners().join("\n");
-        let stylesheet = css::parse(styles).unwrap_or(Stylesheet::new(vec![]));
-        to_styled_node(&document.document_element, &stylesheet)
-    }
-}
-
 fn to_styled_node<'a>(node: &'a Box<Node>, stylesheet: &Stylesheet) -> StyledNode<'a> {
     // prepare basic information of StyledNode
     let mut props = PropertyMap::new();
@@ -102,10 +109,10 @@ fn to_styled_nodes<'a>(nodes: &'a Vec<Box<Node>>, stylesheet: &Stylesheet) -> Ve
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::core::{
         css::Stylesheet,
         dom::{AttrMap, Element},
-        style::{to_styled_node, CSSValue, Display, StyledNode},
     };
 
     #[test]

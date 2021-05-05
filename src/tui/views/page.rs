@@ -2,9 +2,16 @@ use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cu
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    core::{dom::Document, layout::LayoutBox, style::StyledNode},
+    core::{
+        dom::Document,
+        layout::{to_layout_document, LayoutDocument},
+        style::{to_styled_document, StyledDocument},
+    },
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
-    tui::{render::ElementContainer, PageViewAPIHandler},
+    tui::{
+        render::{to_element_container, ElementContainer},
+        PageViewAPIHandler,
+    },
     window::Window,
 };
 use log::{error, info};
@@ -84,9 +91,9 @@ impl PageView {
         let document = &*document.borrow_mut();
 
         // render document
-        let styled: &StyledNode = &document.into();
-        let layout: LayoutBox = styled.into();
-        self.view = layout.into();
+        let styled: StyledDocument = to_styled_document(document);
+        let layout: LayoutDocument = to_layout_document(styled);
+        self.view = to_element_container(&layout.top_box);
 
         Ok(())
     }
