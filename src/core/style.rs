@@ -31,7 +31,7 @@ pub fn to_styled_document<'a>(document: &'a Document) -> StyledDocument<'a> {
 
 /// `StyledNode` wraps `Node` with related CSS properties.
 /// It forms a tree as `Node` does.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct StyledNode<'a> {
     pub node_type: &'a NodeType,
     pub properties: PropertyMap,
@@ -40,7 +40,7 @@ pub struct StyledNode<'a> {
 
 impl<'a> StyledNode<'a> {
     pub fn display(&self) -> Display {
-        match self.get_style_property("display") {
+        match self.properties.get("display") {
             Some(CSSValue::Keyword(s)) => match s.as_str() {
                 "block" => Display::Block,
                 "none" => Display::None,
@@ -48,27 +48,6 @@ impl<'a> StyledNode<'a> {
             },
             _ => Display::Inline,
         }
-    }
-
-    pub fn inner_text(&self) -> String {
-        self.children
-            .iter()
-            .clone()
-            .into_iter()
-            .map(|node| match &node.node_type {
-                NodeType::Text(t) => t.data.clone(),
-                _ => node.inner_text(),
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    }
-
-    pub fn get_style_property(&self, name: &str) -> Option<&CSSValue> {
-        self.properties.get(name)
-    }
-
-    pub fn set_style_property(&mut self, key: &str, value: CSSValue) -> Option<CSSValue> {
-        self.properties.insert(key.to_string(), value)
     }
 }
 
@@ -111,40 +90,36 @@ fn to_styled_nodes<'a>(nodes: &'a Vec<Box<Node>>, stylesheet: &Stylesheet) -> Ve
 mod tests {
     use super::*;
     use crate::core::{
-        css::Stylesheet,
+        css::{Declaration, Rule, SimpleSelector, Stylesheet},
         dom::{AttrMap, Element},
     };
 
     #[test]
     fn test_properties() {
         let e = &Element::new("p".to_string(), AttrMap::new(), vec![]);
-        let mut styled_e: StyledNode<'_> = to_styled_node(e, &Stylesheet::new(vec![]));
-        assert_eq!(
-            styled_e.set_style_property("display", CSSValue::Keyword("block".to_string())),
-            None
+        let styled_e: StyledNode<'_> = to_styled_node(
+            e,
+            &Stylesheet::new(vec![Rule {
+                selectors: vec![SimpleSelector::UniversalSelector],
+                declarations: vec![Declaration {
+                    name: "display".to_string(),
+                    value: CSSValue::Keyword("block".to_string()),
+                }],
+            }]),
         );
         assert_eq!(
-            styled_e.get_style_property("display"),
-            Some(&CSSValue::Keyword("block".to_string()))
+            styled_e,
+            StyledNode {
+                node_type: &e.node_type,
+                properties: [(
+                    "display".to_string(),
+                    CSSValue::Keyword("block".to_string())
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+                children: vec![],
+            }
         );
-        assert_eq!(
-            styled_e.set_style_property("display", CSSValue::Keyword("inline".to_string())),
-            Some(CSSValue::Keyword("block".to_string()))
-        );
-    }
-
-    #[test]
-    fn test_display() {
-        let e = &Element::new("p".to_string(), AttrMap::new(), vec![]);
-        let mut styled_e: StyledNode<'_> = to_styled_node(e, &Stylesheet::new(vec![]));
-
-        styled_e.set_style_property("display", CSSValue::Keyword("block".to_string()));
-        assert_eq!(styled_e.display(), Display::Block);
-
-        styled_e.set_style_property("display", CSSValue::Keyword("inline".to_string()));
-        assert_eq!(styled_e.display(), Display::Inline);
-
-        styled_e.set_style_property("display", CSSValue::Keyword("none".to_string()));
-        assert_eq!(styled_e.display(), Display::None);
     }
 }
