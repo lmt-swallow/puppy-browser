@@ -1,0 +1,21 @@
+<div>
+    <p>This is an example page for puppy-browser.</p>
+    <p>You can use a tags: <a href="jump.html">Go to jump.html</a>.</p>
+    <div>
+        <p>You can use div tags like this.</p>
+    </div>
+    <div>
+        <div>
+            <p>Forms:</p>
+        </div>
+        <input type="text" value="default"></input>
+        <input type="button" value="Click me" onclick="window.alert('button clicked');"></input>
+    </div>
+
+    <script>
+        // You can execute JavaScript like this.
+        console.info(`old window.name === "${window.name}"`);
+        window.name = "test";
+        console.info(`new window.name === "${window.name}"`);
+    </script>
+</div>

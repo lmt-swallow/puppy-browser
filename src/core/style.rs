@@ -28,7 +28,7 @@ const DEFAULT_STYLESHEET: &str = r#"
 script, style {
     display: none;
 }
-div {
+p, div {
     display: block;
 }
 "#;
@@ -72,15 +72,7 @@ impl<'a> StyledNode<'a> {
 fn to_styled_node<'a>(node: &'a Box<Node>, stylesheet: &Stylesheet) -> StyledNode<'a> {
     // prepare basic information of StyledNode
     let mut props = PropertyMap::new();
-    let children = match &node.node_type {
-        NodeType::Element(e) => match e.tag_name.as_str() {
-            "a" => {
-                vec![]
-            }
-            _ => to_styled_nodes(&node.children, stylesheet),
-        },
-        _ => to_styled_nodes(&node.children, stylesheet),
-    };
+    let children = to_styled_nodes(&node.children, stylesheet);
 
     // match CSS rules
     for matched_rule in stylesheet.rules.iter().filter(|r| r.matches(node)) {
