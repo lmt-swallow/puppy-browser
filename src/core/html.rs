@@ -1,4 +1,4 @@
-use crate::dom::{AttrMap, DOMException, Document, Element, Node, Text};
+use crate::dom::{AttrMap, Document, Element, Node, Text};
 use crate::fetch::Response;
 #[allow(unused_imports)]
 use combine::EasyParser;
@@ -18,9 +18,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum HTMLParseError {
-    #[error("failed to construct DOM tree; {0}")]
-    InvalidDocumentError(DOMException),
-
     #[error("failed to parse; {0}")]
     InvalidResourceError(StringStreamError),
 }
@@ -39,26 +36,24 @@ pub enum HTMLParseError {
 // - html5ever crate by Serve project https://github.com/servo/html5ever
 // - HTMLDocumentParser, HTMLTokenizer, HTMLTreeBuilder of Chromium (src/third_party/blink/renderer/core/html/parser/*)
 
-pub fn parse(response: Response) -> Result<Box<Node>, HTMLParseError> {
+/// This functions parses `response` as HTML in non-standard manner.
+pub fn parse(response: Response) -> Result<Document, HTMLParseError> {
     // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
     // We should determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
     let nodes = parse_without_normalziation(response.data);
     match nodes {
         Ok(nodes) => {
-            let document_element_arr = if nodes.len() == 1 {
-                nodes
+            let document_element = if nodes.len() == 1 {
+                nodes.into_iter().nth(0).unwrap()
             } else {
-                vec![Element::new("html".to_string(), AttrMap::new(), nodes)]
+                Element::new("html".to_string(), AttrMap::new(), nodes)
             };
-            match Document::new(
+            Ok(Document::new(
                 response.url.to_string(),
                 response.url.to_string(),
-                document_element_arr,
-            ) {
-                Ok(document_node) => Ok(document_node),
-                Err(e) => Err(HTMLParseError::InvalidDocumentError(e)),
-            }
+                document_element,
+            ))
         }
         Err(e) => Err(e),
     }
@@ -70,11 +65,10 @@ pub fn parse_without_normalziation(data: Vec<u8>) -> Result<Vec<Box<Node>>, HTML
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
     let body = String::from_utf8(data).unwrap();
 
-    let nodes = nodes().parse(&body as &str);
-    match nodes {
-        Ok((nodes, _)) => Ok(nodes),
-        Err(e) => Err(HTMLParseError::InvalidResourceError(e)),
-    }
+    nodes()
+        .parse(&body as &str)
+        .map(|(nodes, _)| nodes)
+        .map_err(|e| HTMLParseError::InvalidResourceError(e))
 }
 
 // `nodes_` (and `nodes`) tries to parse input as Element or Text.
@@ -321,13 +315,12 @@ mod tests {
         let expected = Ok(Document::new(
             Url::parse(url).unwrap().to_string(),
             Url::parse(url).unwrap().to_string(),
-            vec![Element::new(
+            Element::new(
                 "p".to_string(),
                 AttrMap::new(),
                 vec![Text::new("Hello World".to_string())],
-            )],
-        )
-        .unwrap());
+            ),
+        ));
         assert_eq!(got, expected)
     }
 
@@ -346,7 +339,7 @@ mod tests {
         let expected = Ok(Document::new(
             Url::parse(url).unwrap().to_string(),
             Url::parse(url).unwrap().to_string(),
-            vec![Element::new(
+            Element::new(
                 "html".to_string(),
                 AttrMap::new(),
                 vec![
@@ -361,9 +354,8 @@ mod tests {
                         vec![Text::new("Hello World (2)".to_string())],
                     ),
                 ],
-            )],
-        )
-        .unwrap());
+            ),
+        ));
         assert_eq!(parse(s), expected)
     }
 
@@ -382,7 +374,7 @@ mod tests {
         let expected = Ok(Document::new(
             Url::parse(url).unwrap().to_string(),
             Url::parse(url).unwrap().to_string(),
-            vec![Element::new(
+            Element::new(
                 "div".to_string(),
                 AttrMap::new(),
                 vec![
@@ -397,9 +389,8 @@ mod tests {
                         vec![Text::new("nested (2)".to_string())],
                     ),
                 ],
-            )],
-        )
-        .unwrap());
+            ),
+        ));
         assert_eq!(parse(s), expected)
     }
 }
