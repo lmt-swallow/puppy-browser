@@ -1,11 +1,8 @@
 mod console;
 mod dom;
 mod window;
-use log::{error, info};
 use rusty_v8 as v8;
 use v8::READ_ONLY;
-
-use super::JavaScriptRuntime;
 
 /// `initialize_context` takes a HandleScope to `v8::Isolate` object and returns a new HandleScope to newly created `v8::Context`.
 pub fn create_context_with<'s>(
@@ -59,7 +56,7 @@ pub fn set_function_to(
     target.set(scope, key.into(), val.into());
 }
 
-pub fn set_property_with_accessor<'s, GetterF, SetterF>(
+pub fn set_accessor_to<'s, GetterF, SetterF>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
     name: &'static str,
@@ -87,7 +84,7 @@ pub fn set_property_with_accessor<'s, GetterF, SetterF>(
     target.set_accessor_with_setter(scope, key.into(), getter, setter);
 }
 
-pub fn set_property<'s>(
+pub fn set_property_to<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
     name: &'static str,
@@ -97,7 +94,7 @@ pub fn set_property<'s>(
     target.set(scope, key.into(), value.into());
 }
 
-pub fn set_readonly_constant<'s>(
+pub fn set_constant_to<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
     name: &str,
@@ -105,22 +102,4 @@ pub fn set_readonly_constant<'s>(
 ) {
     let key = v8::String::new(scope, name).unwrap();
     target.define_own_property(scope, key.into(), cvalue, READ_ONLY);
-}
-
-fn request_rerender<'s>(scope: &mut v8::HandleScope<'s>, caller: &'static str) {
-    let pv_api_handler = match JavaScriptRuntime::pv_api_handler(scope) {
-        Some(_p) => _p,
-        None => {
-            error!("failed to get document reference; pv_api_handler is None");
-            return;
-        }
-    };
-    match pv_api_handler.request_rerender() {
-        Ok(_) => {
-            info!("re-render requested from {}", caller);
-        }
-        Err(e) => {
-            error!("failed to request alert(); {}", e);
-        }
-    };
 }

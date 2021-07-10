@@ -1,11 +1,17 @@
 use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cursive, With};
-use std::{cell::RefCell, error::Error, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    common::{layout::LayoutBox, StyledNode},
-    dom::{Node, NodeType},
+    core::{
+        dom::Document,
+        layout::{to_layout_document, LayoutDocument},
+        style::{to_styled_document, StyledDocument},
+    },
     javascript::{JavaScriptRuntime, JavaScriptRuntimeError},
-    tui::{components::alert, render::ElementContainer},
+    tui::{
+        render::{to_element_container, ElementContainer},
+        PageViewAPIHandler,
+    },
     window::Window,
 };
 use log::{error, info};
@@ -21,46 +27,10 @@ pub enum PageError {
     JavaScriptError(JavaScriptRuntimeError),
 }
 
-pub struct PageViewAPIHandler {
-    ui_cb_sink: Rc<CbSink>,
-}
-
-impl PageViewAPIHandler {
-    pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
-        Self {
-            ui_cb_sink: ui_cb_sink,
-        }
-    }
-
-    pub fn alert(&self, message: String) -> Result<(), Box<dyn Error>> {
-        self.ui_cb_sink
-            .send(Box::new(move |s: &mut cursive::Cursive| {
-                alert(s, "from JavaScript".to_string(), message);
-            }))?;
-
-        // TODO (enhancement): do this synchronoulsly & error handling
-        Ok(())
-    }
-
-    pub fn request_rerender(&self) -> Result<(), Box<dyn Error>> {
-        self.ui_cb_sink
-            .send(Box::new(move |s: &mut cursive::Cursive| {
-                with_current_page_view(s, |v| {
-                    info!("re-rendering started");
-                    match v.render_document() {
-                        Ok(_) => info!("re-rendering finished"),
-                        Err(e) => error!("re-rendering failed; {}", e),
-                    }
-                });
-            }))?;
-        Ok(())
-    }
-}
-
 pub struct PageView {
     // on document shown in the page
     window: Option<Rc<RefCell<Window>>>,
-    document: Option<Rc<RefCell<Box<Node>>>>,
+    document: Option<Rc<RefCell<Document>>>,
 
     // on UI
     view: ElementContainer,
@@ -81,18 +51,12 @@ impl PageView {
         })
         .with(|v| {
             v.js_runtime
-                .set_pv_api_handler(PageViewAPIHandler::new(ui_cb_sink));
+                .set_pv_api_handler(Rc::new(PageViewAPIHandler::new(ui_cb_sink)));
         })
     }
 
     /// This function prepares a new page with given document.
-    pub fn init_page(&mut self, document: Box<Node>) -> Result<(), PageError> {
-        // assert the argument is Document.
-        match document.node_type {
-            NodeType::Document(ref _document) => {}
-            _ => return Err(PageError::NoDocumentError),
-        };
-
+    pub fn init_page(&mut self, document: Document) -> Result<(), PageError> {
         // prepare `Window` object for the new page
         let window = Rc::new(RefCell::new(Window {
             name: "".to_string(),
@@ -118,19 +82,18 @@ impl PageView {
     }
 
     /// This function renders `self.document` to `self.view`.
-    fn render_document(&mut self) -> Result<(), PageError> {
+    pub fn render_document(&mut self) -> Result<(), PageError> {
         // assert self.document is set
         let document = match &self.document {
             Some(w) => w,
             None => return Err(PageError::NoDocumentError),
         };
-        let document = document.borrow_mut();
+        let document = &*document.borrow_mut();
 
         // render document
-        let top_element = document.document_element();
-        let styled: &StyledNode = &top_element.into();
-        let layout: LayoutBox = styled.into();
-        self.view = layout.into();
+        let styled: StyledDocument = to_styled_document(document);
+        let layout: LayoutDocument = to_layout_document(styled);
+        self.view = to_element_container(&layout.top_box);
 
         Ok(())
     }
@@ -147,7 +110,7 @@ impl PageView {
                 None => return Err(PageError::NoDocumentError),
             };
             let document = document.borrow_mut();
-            document.get_inline_scripts_recursively()
+            document.get_script_inners()
         };
 
         for script in scripts {

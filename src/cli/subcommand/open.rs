@@ -1,6 +1,10 @@
 use std::{env, rc::Rc};
 
-use crate::{cli::CommonOpts, tui::{BrowserView, init_menu, logger}, util};
+use crate::{
+    cli::CommonOpts,
+    tui::{init_menu, setup_logger, BrowserView},
+    util,
+};
 
 use structopt::StructOpt;
 
@@ -21,7 +25,7 @@ pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
 
     // set up logger
     if let Some(level) = common_opts.verbose.log_level() {
-        logger::setup_logger(level);
+        setup_logger(level);
     }
 
     // prepare a window
