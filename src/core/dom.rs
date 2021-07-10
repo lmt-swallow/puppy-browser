@@ -1,3 +1,5 @@
+//! This module includes some implementations on Document Object Model (DOM).
+
 pub mod chardata;
 pub use self::chardata::*;
 

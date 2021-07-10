@@ -1,5 +1,8 @@
+//! This module includes some implementations related to top menu.
+
 use cursive::{event::Key, menu, views::Dialog, CursiveRunnable};
 
+/// `init_menu` adds a top menu to the given cursive instance.
 pub fn init_menu(siv: &mut CursiveRunnable) {
     siv.menubar()
         .add_subtree(

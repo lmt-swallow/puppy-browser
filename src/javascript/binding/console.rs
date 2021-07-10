@@ -1,3 +1,7 @@
+//! # Console API
+//!
+//! This module includes implementations of a subset of Console API (https://console.spec.whatwg.org/).
+
 use log::info;
 use rusty_v8 as v8;
 

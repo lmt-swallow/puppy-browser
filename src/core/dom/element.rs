@@ -1,9 +1,11 @@
+//! This module defines some interfaces related to `Element` interface.
+
 use super::node::{Node, NodeType};
 use std::collections::HashMap;
 
 pub type AttrMap = HashMap<String, String>;
 
-// `Element` interface
+// `Element` is a kind of `Node`.
 // definition: https://dom.spec.whatwg.org/#interface-element
 #[derive(Debug, PartialEq)]
 pub struct Element {

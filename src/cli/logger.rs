@@ -1,5 +1,8 @@
+//! This module defines loggers for `puppy` command.
+
 use log::Level;
 
+/// `setup_logger` initializes a logger with the given log level for CLI.
 pub fn setup_logger(level: Level) -> Result<(), fern::InitError> {
     fern::Dispatch::new()
         .format(|out, message, record| {

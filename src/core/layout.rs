@@ -1,3 +1,5 @@
+//! This module includes some implementations on rendering tree.
+
 use super::style::{Display, StyledDocument};
 use super::{
     dom::NodeType,

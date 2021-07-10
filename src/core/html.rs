@@ -1,3 +1,5 @@
+//! This module includes some implementations on HTML.
+
 use crate::dom::{AttrMap, Document, Element, Node, Text};
 use crate::fetch::Response;
 #[allow(unused_imports)]

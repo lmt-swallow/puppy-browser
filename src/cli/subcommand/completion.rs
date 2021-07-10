@@ -1,9 +1,12 @@
+//! This module defines `completion` subcommand.
+
 use std::io;
 use structopt::clap::Shell;
 use structopt::StructOpt;
 
 use crate::cli::CommonOpts;
 
+/// `Opts` defines possible options for the `completion` subcommand.
 #[derive(StructOpt, Debug)]
 pub enum Opts {
     Zsh,
@@ -11,6 +14,7 @@ pub enum Opts {
     Fish,
 }
 
+/// `run` emits a completion script for some shell environments.
 pub fn run(_common_opts: CommonOpts, opts: Opts) -> i32 {
     match opts {
         Opts::Bash => completion(Shell::Bash),

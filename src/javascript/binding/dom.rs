@@ -1,3 +1,7 @@
+//! # DOM API
+//!
+//! This module includes implementations of a subset of DOM API (https://dom.spec.whatwg.org/).
+
 use std::ffi::c_void;
 
 use super::{set_accessor_to, set_constant_to, set_function_to, set_property_to};

@@ -1,3 +1,5 @@
+//! This module provides rendering features of puppy-browser.
+
 use crate::core::{
     dom::NodeType,
     layout::{BoxProps, BoxType, LayoutBox},

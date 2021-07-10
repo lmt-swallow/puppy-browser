@@ -1,9 +1,12 @@
+//! This module defines `javascript` subcommand.
+
 use crate::{
     cli::{logger, CommonOpts},
     javascript::JavaScriptRuntime,
 };
 use std::io::{self, Write};
 
+/// `run` launches an JS interpreter with V8.
 pub fn run(common_opts: CommonOpts) -> i32 {
     if let Some(level) = common_opts.verbose.log_level() {
         logger::setup_logger(level).unwrap();

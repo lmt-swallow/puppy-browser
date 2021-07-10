@@ -1,3 +1,5 @@
+//! This module includes some implementations on a navigation bar.
+
 use crate::tui::components::TextInputView;
 use cursive::{
     traits::Finder,

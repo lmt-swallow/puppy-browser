@@ -1,3 +1,5 @@
+//! This module defines a way to render `input` tags.
+
 use cursive::views::Button;
 use cursive::{traits::Boxable, View};
 use log::{error, info};

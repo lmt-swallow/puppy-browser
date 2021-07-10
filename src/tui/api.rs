@@ -1,3 +1,5 @@
+//! This module defines *the PageView API*, which provides Rust-side operations to a JavaScript runtime.
+
 use std::{error::Error, rc::Rc};
 
 use cursive::CbSink;
@@ -5,6 +7,7 @@ use log::{error, info};
 
 use super::{components::alert, views::with_current_page_view};
 
+/// `PageViewAPIHandler` is an interface which a JavaScript runtime can use.
 pub struct PageViewAPIHandler {
     ui_cb_sink: Rc<CbSink>,
 }

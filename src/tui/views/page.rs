@@ -1,3 +1,5 @@
+//! This module includes some implementations on a *page*, which renders a webpage.
+
 use cursive::{traits::Finder, view::ViewWrapper, views::LinearLayout, CbSink, Cursive, With};
 use std::{cell::RefCell, rc::Rc};
 
@@ -55,7 +57,7 @@ impl PageView {
         })
     }
 
-    /// This function prepares a new page with given document.
+    /// `init_page` shows the given document to the PageView. 
     pub fn init_page(&mut self, document: Document) -> Result<(), PageError> {
         // prepare `Window` object for the new page
         let window = Rc::new(RefCell::new(Window {
@@ -81,7 +83,7 @@ impl PageView {
         Ok(())
     }
 
-    /// This function renders `self.document` to `self.view`.
+    /// `render_document` renders `self.document` to `self.view`.
     pub fn render_document(&mut self) -> Result<(), PageError> {
         // assert self.document is set
         let document = match &self.document {
@@ -98,7 +100,7 @@ impl PageView {
         Ok(())
     }
 
-    /// This function run scripts.
+    /// `execute_inline_scripts` runs all the inline scripts.
     ///
     /// TODO (enhancement): note on "re-entrant" of HTML tree construction
     fn execute_inline_scripts(&mut self) -> Result<(), PageError> {
@@ -150,6 +152,7 @@ impl ViewWrapper for PageView {
     }
 }
 
+/// `with_current_page_view` returns the PageView instance shown in the given cursive screen instance.
 pub fn with_current_page_view<Output, F>(s: &mut Cursive, f: F) -> Option<Output>
 where
     F: FnOnce(&mut PageView) -> Output,

@@ -1,10 +1,13 @@
+//! This module consists of utility functions for V8 integration.
+
 mod console;
 mod dom;
 mod window;
 use rusty_v8 as v8;
 use v8::READ_ONLY;
 
-/// `initialize_context` takes a HandleScope to `v8::Isolate` object and returns a new HandleScope to newly created `v8::Context`.
+/// `create_context_with` takes a HandleScope to `v8::Isolate` object
+/// and returns a new HandleScope to newly created `v8::Context`.
 pub fn create_context_with<'s>(
     isolate_scope: &mut v8::HandleScope<'s, ()>,
 ) -> v8::Local<'s, v8::Context> {
@@ -32,6 +35,7 @@ pub fn create_context_with<'s>(
     scope.escape(context)
 }
 
+/// `create_object_under` creates an `Object` object with the given name.
 pub fn create_object_under<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
@@ -44,6 +48,9 @@ pub fn create_object_under<'s>(
     value
 }
 
+/// `set_function_to` adds a `Function` object which calls the given Rust function,
+/// into the given object,
+/// with the given property name.
 pub fn set_function_to(
     scope: &mut v8::HandleScope<'_>,
     target: v8::Local<v8::Object>,
@@ -56,6 +63,7 @@ pub fn set_function_to(
     target.set(scope, key.into(), val.into());
 }
 
+/// `set_accessor_to` adds a property with the given name and getter/setter, into the given object.
 pub fn set_accessor_to<'s, GetterF, SetterF>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
@@ -84,6 +92,7 @@ pub fn set_accessor_to<'s, GetterF, SetterF>(
     target.set_accessor_with_setter(scope, key.into(), getter, setter);
 }
 
+/// `set_property_to` adds a property with the given name and value, into the given object.
 pub fn set_property_to<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,
@@ -94,6 +103,7 @@ pub fn set_property_to<'s>(
     target.set(scope, key.into(), value.into());
 }
 
+/// `set_property_to` adds a read-only property with the given name and value, into the given object.
 pub fn set_constant_to<'s>(
     scope: &mut v8::HandleScope<'s>,
     target: v8::Local<v8::Object>,

@@ -1,3 +1,5 @@
+//! This module provides an implementation of page links.
+
 use cursive::{
     align::HAlign,
     direction::Direction,

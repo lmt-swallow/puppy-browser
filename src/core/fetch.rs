@@ -1,10 +1,12 @@
+//! This module includes some implementations on Fetch.
+
 use crate::url::{ParseError, Url};
 use log::{error, info};
 use num_derive::{self, FromPrimitive};
+use reqwest;
 use std::fs;
 use std::{collections::HashMap, fmt, str::FromStr};
 use thiserror::Error;
-use reqwest;
 
 #[derive(Debug, PartialEq, FromPrimitive)]
 pub enum HTTPStatus {
@@ -51,7 +53,7 @@ impl FromStr for ResponseType {
 
 pub type HeaderMap = HashMap<String, String>;
 
-/// `Request` interface: https://fetch.spec.whatwg.org/#request-class
+/// `Request` is an interface defined at [Fetch Standard](https://fetch.spec.whatwg.org/#request-class).
 /// This structure will be used both in internal processing and in JS engine.
 #[derive(Debug, PartialEq)]
 pub struct Request {
@@ -64,7 +66,7 @@ impl Request {
     }
 }
 
-// `Response` interface: https://fetch.spec.whatwg.org/#response-class
+// `Response` iis an interface defined at [Fetch Standard](https://fetch.spec.whatwg.org/#response-class).
 /// This structure will be used both in internal processing and in JS engine.
 #[derive(Debug, PartialEq)]
 pub struct Response {
@@ -122,16 +124,14 @@ pub fn fetch(request: Request) -> Result<Response, FetchError> {
                         "[http(s):] remote resource at {} is requested.",
                         u.to_string()
                     );
-                    match reqwest::blocking::get(u.to_string()).and_then(|resp|resp.bytes()){
-                        Ok(content)=>{
-                            Ok(Response {
-                                url: u,
-                                status: HTTPStatus::OK,
-                                rtype: ResponseType::Basic,
-                                headers: HeaderMap::new(),
-                                data: content.to_vec(),
-                            })        
-                        },
+                    match reqwest::blocking::get(u.to_string()).and_then(|resp| resp.bytes()) {
+                        Ok(content) => Ok(Response {
+                            url: u,
+                            status: HTTPStatus::OK,
+                            rtype: ResponseType::Basic,
+                            headers: HeaderMap::new(),
+                            data: content.to_vec(),
+                        }),
                         Err(_e) => Err(FetchError::NetworkError { response: None }),
                     }
                 }

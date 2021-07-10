@@ -1,6 +1,7 @@
+//! This module includes implementations related to JS features of puppy-browser.
+
 mod api;
 mod binding;
 mod runtime;
-mod v8_init;
 
 pub use self::runtime::*;

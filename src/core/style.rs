@@ -1,3 +1,5 @@
+//! This module includes some implementations on node styles.
+
 use super::{
     css::{self, CSSValue, Stylesheet},
     dom::{Document, Node, NodeType},

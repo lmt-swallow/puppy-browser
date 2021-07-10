@@ -1,3 +1,5 @@
+//! This module provides a feature to render `i` tags.
+
 use cursive::{theme::Effect, utils::markup::StyledString, views::TextView, View};
 
 use crate::core::{dom::element::Element, layout::LayoutBox};

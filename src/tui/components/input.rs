@@ -1,3 +1,5 @@
+//! This module provides an implementation of input forms.
+
 use std::rc::Rc;
 
 use cursive::{event::Callback, theme::BorderStyle, Cursive, With};
@@ -38,7 +40,7 @@ impl TextInputView {
             .unwrap()
     }
 
-    #[allow(clippy::rc_buffer)]    
+    #[allow(clippy::rc_buffer)]
     pub fn get_content(&self) -> Rc<String> {
         // TODO (enhancement): better error handling
         self.with_view(|x| x.with_view(|y| y.get_content()))

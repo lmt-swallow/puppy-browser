@@ -1,14 +1,17 @@
+//! This module includes misc implementations.
+
 use std::path::PathBuf;
 
-pub fn normalize_fileurl_with(mut current_dir: PathBuf, u: String) -> String {
+/// `normalize_fileurl_with` resolves the relative path in the URL with `file://` scheme.
+pub fn normalize_fileurl_with(mut basedir: PathBuf, u: String) -> String {
     if u.starts_with("http://") || u.starts_with("https://") {
         u
     } else {
         if u.starts_with("/") {
             format!("file://{}", u)
         } else {
-            current_dir.push(u);
-            format!("file://{}", current_dir.to_str().unwrap())
+            basedir.push(u);
+            format!("file://{}", basedir.to_str().unwrap())
         }
     }
 }

@@ -1,27 +1,29 @@
-use crate::{
-    core::dom::{Document},
-    javascript::binding,
-    tui::PageViewAPIHandler,
-    window::Window,
-};
+//! This module defines a JavaScript runtime with V8.
+
+use crate::{core::dom::Document, javascript::binding, tui::PageViewAPIHandler, window::Window};
 use rusty_v8 as v8;
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use thiserror::Error;
 
+/// `JavaScriptRuntimeState` defines a state of JS runtime that will be stored per v8 isolate.
+///
+/// TODO (enhancement): In Deno, which uses `rusty_v8` as we do, they use a more flexible datastore called [GothamState](https://github.com/denoland/deno/blob/v1.10.2/core/gotham_state.rs).
+/// We can adopt the similar mechanisms instead of adding new properties when we need to extend this state more.
 pub struct JavaScriptRuntimeState {
     pub context: v8::Global<v8::Context>,
-
-    // TODO (enhancement): remove this by GothamState like Deno does.
     pub window: Option<Rc<RefCell<Window>>>,
     pub document: Option<Rc<RefCell<Document>>>,
     pub pv_api_handler: Option<Rc<PageViewAPIHandler>>,
 }
 
+/// `JavaScriptRuntime` defines a JS runtime with v8.
+/// It has a link to a V8 isolate, and the isolate includes `JavaScriptRuntimeState` in its *slot*.
 #[derive(Debug)]
 pub struct JavaScriptRuntime {
-    pub v8_isolate: v8::OwnedIsolate,
+    v8_isolate: v8::OwnedIsolate,
 }
 
+/// `JavaScriptRuntimeError` describes an error occured during JS execution.
 #[derive(Error, Debug, PartialEq)]
 pub enum JavaScriptRuntimeError {
     #[error("failed to parse the script: {message:?}")]
@@ -36,7 +38,11 @@ impl JavaScriptRuntime {
     pub fn new() -> Self {
         // init v8 platform just once
         static PUPPY_INIT: Once = Once::new();
-        PUPPY_INIT.call_once(move || super::v8_init::init_platform().unwrap());
+        PUPPY_INIT.call_once(move || {
+            let platform = v8::new_default_platform().unwrap();
+            v8::V8::initialize_platform(platform);
+            v8::V8::initialize();
+        });
 
         // create v8 isolate & context
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
@@ -60,85 +66,7 @@ impl JavaScriptRuntime {
         }
     }
 
-    // on state management
-    ////
-
-    pub fn state(isolate: &v8::Isolate) -> Rc<RefCell<JavaScriptRuntimeState>> {
-        let s = isolate
-            .get_slot::<Rc<RefCell<JavaScriptRuntimeState>>>()
-            .unwrap();
-        s.clone()
-    }
-
-    pub fn get_state(&self) -> Rc<RefCell<JavaScriptRuntimeState>> {
-        Self::state(&self.v8_isolate)
-    }
-
-    pub fn get_handle_scope(&mut self) -> v8::HandleScope {
-        let context = self.get_context();
-        v8::HandleScope::with_context(&mut self.v8_isolate, context)
-    }
-
-    pub fn get_context(&mut self) -> v8::Global<v8::Context> {
-        let state = self.get_state();
-        let state = state.borrow();
-        state.context.clone()
-    }
-
-    // on `Window` objects
-    ////
-
-    pub fn window(isolate: &v8::Isolate) -> Option<Rc<RefCell<Window>>> {
-        let state = Self::state(isolate);
-        let state = state.borrow();
-        state.window.clone()
-    }
-
-    pub fn get_window(&mut self) -> Option<Rc<RefCell<Window>>> {
-        Self::window(&self.v8_isolate)
-    }
-
-    pub fn set_window(&mut self, window: Rc<RefCell<Window>>) {
-        self.get_state().borrow_mut().window = Some(window);
-    }
-
-    // on `PageView` API handlers
-    ////
-
-    pub fn pv_api_handler(isolate: &v8::Isolate) -> Option<Rc<PageViewAPIHandler>> {
-        let state = Self::state(isolate);
-        let state = state.borrow();
-        state.pv_api_handler.clone()
-    }
-
-    pub fn get_pv_api_handler(&mut self) -> Option<Rc<PageViewAPIHandler>> {
-        Self::pv_api_handler(&self.v8_isolate)
-    }
-
-    pub fn set_pv_api_handler(&mut self, view_api_handler: Rc<PageViewAPIHandler>) {
-        self.get_state().borrow_mut().pv_api_handler = Some(view_api_handler);
-    }
-
-    // on `Document` object
-    ////
-
-    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Document>>> {
-        let state = Self::state(isolate);
-        let state = state.borrow();
-        state.document.clone()
-    }
-
-    pub fn get_document(&mut self) -> Option<Rc<RefCell<Document>>> {
-        Self::document(&self.v8_isolate)
-    }
-
-    pub fn set_document(&mut self, document: Rc<RefCell<Document>>) {
-        self.get_state().borrow_mut().document = Some(document);
-    }
-
-    // on script execution
-    ////
-
+    /// `execute` runs a given source in the current context.
     pub fn execute(
         &mut self,
         filename: &str,
@@ -188,8 +116,103 @@ impl JavaScriptRuntime {
     }
 }
 
-// NOTE: See the following to get full error information.
-// https://github.com/denoland/rusty_v8/blob/0d093a02f658781d52e6d70d138768fc19a79d54/examples/shell.rs#L158
+/// Implementations for state management
+#[allow(dead_code)]
+impl JavaScriptRuntime {
+    /// `state` returns the runtime state stored in the given isolate.
+    pub fn state(isolate: &v8::Isolate) -> Rc<RefCell<JavaScriptRuntimeState>> {
+        let s = isolate
+            .get_slot::<Rc<RefCell<JavaScriptRuntimeState>>>()
+            .unwrap();
+        s.clone()
+    }
+
+    /// `get_state` returns the runtime state for the runtime.
+    pub fn get_state(&self) -> Rc<RefCell<JavaScriptRuntimeState>> {
+        Self::state(&self.v8_isolate)
+    }
+
+    /// `get_handle_scope` returns [a handle scope](https://v8docs.nodesource.com/node-0.8/d3/d95/classv8_1_1_handle_scope.html) for the runtime.
+    pub fn get_handle_scope(&mut self) -> v8::HandleScope {
+        let context = self.get_context();
+        v8::HandleScope::with_context(&mut self.v8_isolate, context)
+    }
+
+    /// `get_context` returns [a handle scope](https://v8docs.nodesource.com/node-0.8/df/d69/classv8_1_1_context.html) for the runtime.
+    pub fn get_context(&mut self) -> v8::Global<v8::Context> {
+        let state = self.get_state();
+        let state = state.borrow();
+        state.context.clone()
+    }
+}
+
+/// Implementations for interacting Rust-world `Window` object and the JS runtime.
+#[allow(dead_code)]
+impl JavaScriptRuntime {
+    /// `window` returns the `Window` object in the Rust world linked to the given isolate.
+    pub fn window(isolate: &v8::Isolate) -> Option<Rc<RefCell<Window>>> {
+        let state = Self::state(isolate);
+        let state = state.borrow();
+        state.window.clone()
+    }
+
+    /// `get_window` returns the `Window` object in the Rust world linked to the runtime.
+    pub fn get_window(&mut self) -> Option<Rc<RefCell<Window>>> {
+        Self::window(&self.v8_isolate)
+    }
+
+    /// `set_window` links the given `Window` object to the runtime.
+    pub fn set_window(&mut self, window: Rc<RefCell<Window>>) {
+        self.get_state().borrow_mut().window = Some(window);
+    }
+}
+
+/// Implementations for interacting Rust-world `Document` object and the JS runtime.
+#[allow(dead_code)]
+impl JavaScriptRuntime {
+    /// `document` returns the `Document` object in the Rust world linked to the given isolate.
+    pub fn document(isolate: &v8::Isolate) -> Option<Rc<RefCell<Document>>> {
+        let state = Self::state(isolate);
+        let state = state.borrow();
+        state.document.clone()
+    }
+
+    /// `get_window` returns the `Document` object in the Rust world linked to the runtime.
+    pub fn get_document(&mut self) -> Option<Rc<RefCell<Document>>> {
+        Self::document(&self.v8_isolate)
+    }
+
+    /// `set_document` links the given `Document` object to the runtime.
+    pub fn set_document(&mut self, document: Rc<RefCell<Document>>) {
+        self.get_state().borrow_mut().document = Some(document);
+    }
+}
+
+/// Implementations for proxying Rust-world PageView API and the JS runtime.
+#[allow(dead_code)]
+impl JavaScriptRuntime {
+    /// `pv_api_handler` returns the `PageViewAPIHandler` object in the Rust world linked to the given isolate.
+    pub fn pv_api_handler(isolate: &v8::Isolate) -> Option<Rc<PageViewAPIHandler>> {
+        let state = Self::state(isolate);
+        let state = state.borrow();
+        state.pv_api_handler.clone()
+    }
+
+    /// `get_pv_api_handler` returns the `PageViewAPIHandler` object in the Rust world linked to the runtime.
+    pub fn get_pv_api_handler(&mut self) -> Option<Rc<PageViewAPIHandler>> {
+        Self::pv_api_handler(&self.v8_isolate)
+    }
+
+    /// `set_pv_api_handler` links the given `PageViewAPIHandler` object to the runtime.
+    pub fn set_pv_api_handler(&mut self, view_api_handler: Rc<PageViewAPIHandler>) {
+        self.get_state().borrow_mut().pv_api_handler = Some(view_api_handler);
+    }
+}
+
+/// `to_pretty_string` formats the `TryCatch` instance into the prettified error string for puppy-browser.
+///
+/// NOTE: See the following to get full error information.
+/// https://github.com/denoland/rusty_v8/blob/0d093a02f658781d52e6d70d138768fc19a79d54/examples/shell.rs#L158
 fn to_pretty_string(mut try_catch: v8::TryCatch<v8::HandleScope>) -> String {
     // TODO (enhancement): better error handling needed! wanna remove uncareful unwrap().
     let exception_string = try_catch

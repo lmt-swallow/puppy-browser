@@ -1,3 +1,5 @@
+//! This module includes some implementations on Cascade Style Sheets (CSS).
+
 use super::dom::{Node, NodeType};
 use combine::{
     choice,
@@ -19,7 +21,7 @@ pub struct Stylesheet {
 impl Stylesheet {
     pub fn new(rules: Vec<Rule>) -> Self {
         Stylesheet { rules: rules }
-    }    
+    }
 }
 
 /// `Rule` represents a single CSS rule.
@@ -108,8 +110,7 @@ pub enum AttributeSelectorOp {
         // TODO (enhancement): support more attribute selectors
 }
 
-/// `Declaration` represents a CSS declaration defined in the following standard:
-/// - https://www.w3.org/TR/css-syntax-3/#declaration
+/// `Declaration` represents a CSS declaration defined at [CSS Syntax Module Level 3](https://www.w3.org/TR/css-syntax-3/#declaration)
 ///
 /// Declarations are further categorized into the followings:
 /// - descriptors, which are mostly used in "at-rules" like `@foo (bar: piyo)` https://www.w3.org/Style/CSS/all-descriptors.en.html
@@ -123,21 +124,21 @@ pub struct Declaration {
     // TODO (enhancement): add a field for `!important`
 }
 
-/// `CSSValue` represents some of component value types.
-/// See the following to check the definition of component value types:
-/// - https://www.w3.org/TR/css-values-3/#component-types
+/// `CSSValue` represents some of *component value types* defined at [CSS Values and Units Module Level 3](https://www.w3.org/TR/css-values-3/#component-types).
 #[derive(Debug, PartialEq, Clone)]
 pub enum CSSValue {
     Keyword(String),
     Length((usize, Unit)),
 }
 
+/// `Unit` describes *a relative length unit* defined at [CSS Values and Units Module Level 3](https://www.w3.org/TR/css-values-3/#lengths)
 #[derive(Debug, PartialEq, Clone)]
 pub enum Unit {
     Em,
-    // TODO (enhancement): add more units here from https://www.w3.org/TR/css-values-3/#lengths
+    // TODO (enhancement): add more units here from the definition.
 }
 
+/// `CSSParseError` describes an error occured during CSS parsing.
 #[derive(Error, Debug, PartialEq)]
 pub enum CSSParseError {
     #[error("failed to parse; {0}")]

@@ -1,3 +1,5 @@
+//! This module provides a feature to render `a` tags.
+
 use cursive::View;
 
 use crate::{

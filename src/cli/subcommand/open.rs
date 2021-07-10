@@ -1,3 +1,5 @@
+//! This module defines `open` subcommand.
+
 use std::{env, rc::Rc};
 
 use crate::{
@@ -8,11 +10,13 @@ use crate::{
 
 use structopt::StructOpt;
 
+/// `Opts` defines options for the `open` subcommand.
 #[derive(StructOpt, Debug)]
 pub struct Opts {
     pub url: Option<String>,
 }
 
+/// `run` launches a TUI window to show the main UI.
 pub fn run(common_opts: CommonOpts, opts: Opts) -> i32 {
     let start_url = opts
         .url

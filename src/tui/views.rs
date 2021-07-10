@@ -1,3 +1,5 @@
+//! This module includes some TUI parts of puppy-browser.
+
 mod browser;
 pub use self::browser::*;
 

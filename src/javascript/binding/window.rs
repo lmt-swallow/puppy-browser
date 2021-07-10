@@ -1,3 +1,7 @@
+//! # Window interface
+//!
+//! This module includes implementations of a subset of Window interface (https://html.spec.whatwg.org/multipage/window-object.html#window).
+
 use log::{error, trace};
 use rusty_v8 as v8;
 

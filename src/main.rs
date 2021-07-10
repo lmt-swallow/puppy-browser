@@ -1,6 +1,7 @@
 use puppy::cli;
 use structopt::StructOpt;
 
+/// `main` is an entrypoint of `puppy-browser`.
 fn main() {
     let opts: cli::Opts = cli::Opts::from_args();
 

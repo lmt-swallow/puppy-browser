@@ -1,3 +1,5 @@
+//! This module provides a modal UI implementation.
+
 use cursive::{
     views::{Dialog, TextView},
     Cursive,

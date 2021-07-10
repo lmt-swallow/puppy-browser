@@ -1,3 +1,5 @@
+//! This module defines options of `puppy` command.
+
 use super::subcommand::*;
 use clap_verbosity_flag::Verbosity;
 use structopt::StructOpt;
@@ -20,7 +22,7 @@ pub struct CommonOpts {
 #[derive(StructOpt, Debug)]
 pub enum SubCommand {
     Open(open::Opts),
-    Completion(completion::Opts),    
+    Completion(completion::Opts),
     #[structopt(name = "js")]
     JavaScript,
 }

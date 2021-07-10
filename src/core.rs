@@ -1,3 +1,5 @@
+//! This module includes core implementations of puppy-browser.
+
 pub mod css;
 pub mod dom;
 pub mod fetch;
