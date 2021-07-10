@@ -4,6 +4,8 @@
 
 `puppy` is an example implementation of a tiny Web browser for educational purposes.
 
+![puppy-browser](./docs/images/puppy-browser.png)
+
 ## How to run puppy locally
 
 You can run puppy program with the following command(s):
@@ -46,7 +48,7 @@ cargo test
 
 ## How to speed up build process
 
-You can cache V8-related files for build as follows:
+You can cache files related to V8 as follows:
 
 ```bash
 $ export RUSTY_V8_MIRROR=$HOME/.cache/rusty_v8
