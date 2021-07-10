@@ -16,11 +16,6 @@ pub enum NodeType {
 }
 
 impl Node {
-    pub fn append_child(&mut self, n: Box<Node>) -> &Box<Node> {
-        self.children.push(n);
-        self.children.last().unwrap()
-    }
-
     pub fn inner_text(&self) -> String {
         self.children
             .iter()
@@ -87,17 +82,6 @@ mod tests {
         core::dom::Text,
         dom::{AttrMap, Element},
     };
-
-    #[test]
-    fn test_append_child() {
-        let mut node = Element::new("p".to_string(), AttrMap::new(), vec![]);
-
-        node.append_child(Element::new("p".to_string(), AttrMap::new(), vec![]));
-        assert_eq!(node.children.len(), 1);
-
-        node.append_child(Element::new("p".to_string(), AttrMap::new(), vec![]));
-        assert_eq!(node.children.len(), 2)
-    }
 
     #[test]
     fn test_inner_text() {

@@ -1,4 +1,4 @@
-//! This module includes some sub-modules to provide text user interface of puppy-browser.
+//! This module includes some sub-modules to provide text user interface of puppy.
 
 mod api;
 mod components;

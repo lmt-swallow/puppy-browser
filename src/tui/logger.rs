@@ -1,4 +1,4 @@
-//! This module defines loggers for the TUI of puppy-browser.
+//! This module defines loggers for the TUI of puppy.
 
 use cursive::logger;
 use log::{set_max_level, Level};

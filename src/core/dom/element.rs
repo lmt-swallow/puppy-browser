@@ -5,8 +5,7 @@ use std::collections::HashMap;
 
 pub type AttrMap = HashMap<String, String>;
 
-// `Element` is a kind of `Node`.
-// definition: https://dom.spec.whatwg.org/#interface-element
+/// `Element` is a kind of `Node` defined at [DOM Standard](https://dom.spec.whatwg.org/#interface-element).
 #[derive(Debug, PartialEq)]
 pub struct Element {
     pub tag_name: String,

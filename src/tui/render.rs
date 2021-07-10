@@ -1,4 +1,4 @@
-//! This module provides rendering features of puppy-browser.
+//! This module provides rendering features of puppy.
 
 use crate::core::{
     dom::NodeType,

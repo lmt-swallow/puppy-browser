@@ -1,4 +1,4 @@
-//! This module includes some sub-modules to provide command-line interface of puppy-browser.
+//! This module includes some sub-modules to provide command-line interface of puppy.
 
 pub mod opts;
 pub use self::opts::*;

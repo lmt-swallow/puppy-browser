@@ -66,7 +66,7 @@ impl Request {
     }
 }
 
-// `Response` iis an interface defined at [Fetch Standard](https://fetch.spec.whatwg.org/#response-class).
+// `Response` is an interface defined at [Fetch Standard](https://fetch.spec.whatwg.org/#response-class).
 /// This structure will be used both in internal processing and in JS engine.
 #[derive(Debug, PartialEq)]
 pub struct Response {

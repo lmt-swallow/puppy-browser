@@ -1,4 +1,4 @@
-//! This module includes implementations related to JS features of puppy-browser.
+//! This module includes implementations related to JS features of puppy.
 
 mod api;
 mod binding;

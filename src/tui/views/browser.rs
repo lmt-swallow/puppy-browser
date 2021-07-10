@@ -1,4 +1,4 @@
-//! This module includes some implementations on top-level views of puppy-browser.
+//! This module includes some implementations on top-level views of puppy.
 
 use cursive::{
     traits::Finder,
@@ -21,7 +21,7 @@ pub static NAVBAR_VIEW_NAME: &str = "browser-view-navbar";
 pub static PAGE_VIEW_NAME: &str = "browser-view-page";
 pub static PAGE_VIEW_CONTAINER_NAME: &str = "browser-view-page-container";
 
-/// `BrowserView` is a main view of puppy-browser.
+/// `BrowserView` is a main view of puppy.
 pub struct BrowserView {
     view: LinearLayout,
     ui_cb_sink: Rc<CbSink>,

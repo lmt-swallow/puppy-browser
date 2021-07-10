@@ -1,4 +1,4 @@
-//! This module includes core implementations of puppy-browser.
+//! This module includes core implementations of puppy.
 
 pub mod css;
 pub mod dom;
