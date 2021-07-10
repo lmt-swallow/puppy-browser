@@ -1,0 +1,37 @@
+<body>
+    <div id="result">
+        <p>not clicked yet</p>
+    </div>
+    <div>
+        <input type="submit" onclick="document.getElementById(`result`).innerHTML = `\x3cp\x3eclicked!\x3c/p\x3e`;"
+            value="click me"></input>
+    </div>
+    <div class="inlinediv">
+        <p>(inline p0)</p>
+    </div>
+    <div class="inlinediv">
+        <p>(inline p1)</p>
+    </div>
+
+    <div>
+        <input type="submit" onclick="window.alert(`hello world!`);" value="show alert"></input>
+    </div>
+
+    <style>
+        style {
+            display: none;
+        }
+
+        div {
+            display: block;
+        }
+
+        body {
+            display: block;
+        }
+
+        div[class=inlinediv] {
+            display: inline;
+        }
+    </style>
+</body>
