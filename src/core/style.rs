@@ -21,6 +21,15 @@ pub struct StyledDocument<'a> {
     pub document_element: StyledNode<'a>,
 }
 
+/// `StyledNode` wraps `Node` with related CSS properties.
+/// It forms a tree as `Node` does.
+#[derive(Debug, PartialEq)]
+pub struct StyledNode<'a> {
+    pub node_type: &'a NodeType,
+    pub properties: PropertyMap,
+    pub children: Vec<StyledNode<'a>>,
+}
+
 /// `DEFAULT_STYLESHEET` is a *user agent stylesheet*, which will be applied to all documents.
 /// Modern browsers have different user agent stylesheets; for example:
 /// - Chromium: https://chromium.googlesource.com/chromium/blink/+/refs/heads/main/Source/core/css/html.css
@@ -35,6 +44,7 @@ p, div {
 }
 "#;
 
+/// `to_styled_document` transforms the given Document instance into `StyledDocument`, a node tree with corresponding CSS properties.
 pub fn to_styled_document<'a>(document: &'a Document) -> StyledDocument<'a> {
     let styles = format!(
         "{}\n{}",
@@ -46,28 +56,6 @@ pub fn to_styled_document<'a>(document: &'a Document) -> StyledDocument<'a> {
 
     StyledDocument {
         document_element: document_element,
-    }
-}
-
-/// `StyledNode` wraps `Node` with related CSS properties.
-/// It forms a tree as `Node` does.
-#[derive(Debug, PartialEq)]
-pub struct StyledNode<'a> {
-    pub node_type: &'a NodeType,
-    pub properties: PropertyMap,
-    pub children: Vec<StyledNode<'a>>,
-}
-
-impl<'a> StyledNode<'a> {
-    pub fn display(&self) -> Display {
-        match self.properties.get("display") {
-            Some(CSSValue::Keyword(s)) => match s.as_str() {
-                "block" => Display::Block,
-                "none" => Display::None,
-                _ => Display::Inline,
-            },
-            _ => Display::Inline,
-        }
     }
 }
 
@@ -133,5 +121,18 @@ mod tests {
                 children: vec![],
             }
         );
+    }
+}
+
+impl<'a> StyledNode<'a> {
+    pub fn display(&self) -> Display {
+        match self.properties.get("display") {
+            Some(CSSValue::Keyword(s)) => match s.as_str() {
+                "block" => Display::Block,
+                "none" => Display::None,
+                _ => Display::Inline,
+            },
+            _ => Display::Inline,
+        }
     }
 }
