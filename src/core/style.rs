@@ -19,8 +19,26 @@ pub struct StyledDocument<'a> {
     pub document_element: StyledNode<'a>,
 }
 
+/// `DEFAULT_STYLESHEET` is a *user agent stylesheet*, which will be applied to all documents.
+/// Modern browsers have different user agent stylesheets; for example:
+/// - Chromium: https://chromium.googlesource.com/chromium/blink/+/refs/heads/main/Source/core/css/html.css
+/// - Safari: https://trac.webkit.org/browser/trunk/Source/WebCore/css/html.css
+/// - Firefox: https://searchfox.org/mozilla-central/source/layout/style/res/html.css
+const DEFAULT_STYLESHEET: &str = r#"
+script, style {
+    display: none;
+}
+div {
+    display: block;
+}
+"#;
+
 pub fn to_styled_document<'a>(document: &'a Document) -> StyledDocument<'a> {
-    let styles = document.get_style_inners().join("\n");
+    let styles = format!(
+        "{}\n{}",
+        DEFAULT_STYLESHEET.to_string(),
+        document.get_style_inners().join("\n")
+    );
     let stylesheet = css::parse(styles).unwrap_or(Stylesheet::new(vec![]));
     let document_element = to_styled_node(&document.document_element, &stylesheet);
 

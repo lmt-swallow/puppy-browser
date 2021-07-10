@@ -19,7 +19,7 @@ pub struct Stylesheet {
 impl Stylesheet {
     pub fn new(rules: Vec<Rule>) -> Self {
         Stylesheet { rules: rules }
-    }
+    }    
 }
 
 /// `Rule` represents a single CSS rule.
