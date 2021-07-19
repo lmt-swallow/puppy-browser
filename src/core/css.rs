@@ -61,6 +61,9 @@ pub enum SimpleSelector {
         attribute: String,
         value: String,
     },
+    ClassSelector {
+        class_name: String,
+    },
     // TODO (enhancement): support multiple attribute selectors like `a[href=bar][ping=foo]`
     // TODO (enhancement): support more attribute selectors
 }
@@ -95,6 +98,10 @@ impl SimpleSelector {
                                 .unwrap_or(false),
                         }
                 }
+                _ => false,
+            },
+            SimpleSelector::ClassSelector { class_name } => match n.node_type {
+                NodeType::Element(ref e) => e.attributes.get("class") == Some(class_name),
                 _ => false,
             },
         }
@@ -220,6 +227,10 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let universal_selector = char::char('*').map(|_| SimpleSelector::UniversalSelector);
+    let class_selector =
+        (char::char('.'), many1(letter())).map(|(_, class_name)| SimpleSelector::ClassSelector {
+            class_name: class_name,
+        });
     let type_or_attribute_selector = (
         many1(letter()).skip(whitespaces()),
         optional((
@@ -255,7 +266,11 @@ where
             None => Ok(SimpleSelector::TypeSelector { tag_name: tag_name }),
         });
 
-    choice((universal_selector, type_or_attribute_selector))
+    choice((
+        universal_selector,
+        class_selector,
+        type_or_attribute_selector,
+    ))
 }
 
 fn declarations<Input>() -> impl Parser<Input, Output = Vec<Declaration>>
