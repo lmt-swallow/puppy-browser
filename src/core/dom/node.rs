@@ -66,12 +66,16 @@ impl ToString for Node {
                     .iter()
                     .clone()
                     .into_iter()
-                    .map(|node| node.inner_html())
+                    .map(|node| node.to_string())
                     .collect::<Vec<_>>()
                     .join("");
-                format!("<{} {}>{}</{}>", e.tag_name, attrs, children, e.tag_name)
+                if attrs != "" {
+                    format!("<{} {}>{}</{}>", e.tag_name, attrs, children, e.tag_name)
+                } else {
+                    format!("<{}>{}</{}>", e.tag_name, children, e.tag_name)
+                }
             }
-            NodeType::Text(ref t) => t.data.to_string(),
+            NodeType::Text(ref t) => t.data.clone(),
         }
     }
 }
