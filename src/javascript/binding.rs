@@ -18,17 +18,15 @@ pub fn create_context_with<'s>(
 
     // get global proxy object
     let global = context.global(scope);
-
-    // bind `console` object
     let scope = &mut v8::ContextScope::new(scope, context);
+    
+    // bind `console` object
     console::initialize_console(scope, global);
 
     // bind `window` object
-    let scope = &mut v8::ContextScope::new(scope, context);
     window::initialize_window(scope, global);
 
-    // bind `document` object
-    let scope = &mut v8::ContextScope::new(scope, context);
+    // bind `document` object    let scope = &mut v8::ContextScope::new(scope, context);
     dom::initialize_dom(scope, global);
 
     // return with a handle to newly created v8::Context

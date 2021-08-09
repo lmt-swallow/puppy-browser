@@ -148,7 +148,7 @@ where
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let attribute_name = many1::<String, _, _>(letter());
-    let attribute_inner_value = many1::<String, _, _>(satisfy(|c: char| c != '"'));
+    let attribute_inner_value = many1::<String, _, _>(satisfy(|c: char| c != '"')).map(|x|x.replace("&quot;", "\""));
     let attribute_value = between(char('"'), char('"'), attribute_inner_value);
     (
         attribute_name,
@@ -206,6 +206,11 @@ mod tests {
         assert_eq!(
             attribute().easy_parse("test = \"foobar\""),
             Ok((("test".to_string(), "foobar".to_string()), ""))
+        );
+
+        assert_eq!(
+            attribute().easy_parse("test = \"&quot;&quot;\""),
+            Ok((("test".to_string(), "\"\"".to_string()), ""))
         )
     }
 
