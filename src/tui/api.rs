@@ -15,7 +15,7 @@ pub struct PageViewAPIHandler {
 impl PageViewAPIHandler {
     pub fn new(ui_cb_sink: Rc<CbSink>) -> Self {
         Self {
-            ui_cb_sink: ui_cb_sink,
+            ui_cb_sink,
         }
     }
 

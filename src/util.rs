@@ -5,14 +5,13 @@ use std::path::PathBuf;
 /// `normalize_fileurl_with` resolves the relative path in the URL with `file://` scheme.
 pub fn normalize_fileurl_with(mut basedir: PathBuf, u: String) -> String {
     if u.starts_with("http://") || u.starts_with("https://") {
-        u
+        return u;
+    }
+    if u.starts_with("/") {
+       format!("file://{}", u)
     } else {
-        if u.starts_with("/") {
-            format!("file://{}", u)
-        } else {
-            basedir.push(u);
-            format!("file://{}", basedir.to_str().unwrap())
-        }
+        basedir.push(u);
+        format!("file://{}", basedir.to_str().unwrap())
     }
 }
 

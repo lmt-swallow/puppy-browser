@@ -89,7 +89,7 @@ fn to_layout_box<'a>(snode: StyledNode<'a>) -> LayoutBox<'a> {
     };
 
     let mut layout = LayoutBox {
-        box_type: box_type,
+        box_type,
         box_props: Some(box_props),
         children: vec![],
     };

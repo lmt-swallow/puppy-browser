@@ -55,7 +55,7 @@ pub fn to_styled_document<'a>(document: &'a Document) -> StyledDocument<'a> {
     let document_element = to_styled_node(&document.document_element, &stylesheet);
 
     StyledDocument {
-        document_element: document_element,
+        document_element,
     }
 }
 
@@ -75,7 +75,7 @@ fn to_styled_node<'a>(node: &'a Box<Node>, stylesheet: &Stylesheet) -> StyledNod
     StyledNode {
         node_type: &node.node_type,
         properties: props,
-        children: children,
+        children,
     }
 }
 
