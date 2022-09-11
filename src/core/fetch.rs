@@ -62,7 +62,7 @@ pub struct Request {
 
 impl Request {
     pub fn new(url: String) -> Self {
-        Request { url: url }
+        Request { url }
     }
 }
 

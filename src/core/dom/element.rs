@@ -17,7 +17,7 @@ impl Element {
         Box::new(Node {
             node_type: NodeType::Element(Element {
                 tag_name: name,
-                attributes: attributes,
+                attributes,
             }),
             children,
         })

@@ -39,7 +39,7 @@ impl JavaScriptRuntime {
         // init v8 platform just once
         static PUPPY_INIT: Once = Once::new();
         PUPPY_INIT.call_once(move || {
-            let platform = v8::new_default_platform().unwrap();
+            let platform = v8::new_default_platform(1, true).make_shared();
             v8::V8::initialize_platform(platform);
             v8::V8::initialize();
         });
@@ -55,7 +55,7 @@ impl JavaScriptRuntime {
         // store state inside v8 isolate
         // NOTE: the data would be stored by Isolate::SetData (https://v8docs.nodesource.com/node-4.8/d5/dda/classv8_1_1_isolate.html#a7acadfe7965997e9c386a05f098fbe36)
         isolate.set_slot(Rc::new(RefCell::new(JavaScriptRuntimeState {
-            context: context,
+            context,
             window: None,
             document: None,
             pv_api_handler: None,

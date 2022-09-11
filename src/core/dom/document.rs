@@ -21,9 +21,9 @@ pub struct Document {
 impl Document {
     pub fn new(url: String, document_uri: String, document_element: Box<Node>) -> Document {
         Document {
-            url: url,
-            document_uri: document_uri,
-            document_element: document_element,
+            url,
+            document_uri,
+            document_element,
         }
     }
 

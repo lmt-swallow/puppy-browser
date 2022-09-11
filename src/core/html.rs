@@ -65,7 +65,7 @@ pub fn parse_without_normalziation(data: Vec<u8>) -> Result<Vec<Box<Node>>, HTML
     // NOTE: Here we assume the resource is HTML and encoded by UTF-8.
     // We should determine character encoding as follows:
     // https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-streama
-    let body = String::from_utf8(data).unwrap();
+    let body: String = data.iter().map(|&c| c as char).collect();
 
     nodes()
         .parse(&body as &str)

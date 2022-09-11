@@ -41,31 +41,8 @@ impl Link {
         }
     }
 
-    pub fn set_callback<F>(&mut self, cb: F)
-    where
-        F: Fn(&mut Cursive) + 'static,
-    {
-        self.callback = Callback::from_fn(cb);
-    }
-
-    pub fn label(&self) -> &str {
-        &self.label
-    }
-
-    pub fn set_label<S>(&mut self, label: S)
-    where
-        S: Into<String>,
-    {
-        self.label = label.into();
-        self.invalidate();
-    }
-
     fn req_size(&self) -> Vec2 {
         Vec2::new(self.label.width(), 1)
-    }
-
-    fn invalidate(&mut self) {
-        self.invalidated = true;
     }
 }
 
